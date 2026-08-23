@@ -1,0 +1,129 @@
+# ============================================================================
+# MaiJur - Xcode / Swift / macOS gitignore
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# macOS metadata
+# ----------------------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Finder and volume metadata
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+
+# ----------------------------------------------------------------------------
+# Xcode generated files
+# ----------------------------------------------------------------------------
+DerivedData/
+build/
+Build/
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM
+*.dSYM.zip
+*.xcarchive/
+*.xcresult
+
+# Xcode temporary and user-specific project files. Keep the shared
+# .xcodeproj, .xcworkspace, schemes, and project configuration tracked.
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# ----------------------------------------------------------------------------
+# Swift Package Manager
+# ----------------------------------------------------------------------------
+.build/
+.swiftpm/
+Packages/
+
+# Package.resolved is intentionally NOT ignored for an application. It pins
+# dependency versions so that local and CI builds stay reproducible.
+
+# ----------------------------------------------------------------------------
+# Dependency managers (only relevant if introduced later)
+# ----------------------------------------------------------------------------
+Pods/
+Carthage/Build/
+
+# ----------------------------------------------------------------------------
+# Fastlane generated output
+# ----------------------------------------------------------------------------
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# ----------------------------------------------------------------------------
+# Coverage, logs, test output, and temporary files
+# ----------------------------------------------------------------------------
+*.log
+*.coverage
+*.profdata
+*.gcda
+*.gcno
+*.tmp
+*.temp
+*.swp
+*.swo
+*.orig
+.coverage/
+coverage/
+tmp/
+temp/
+
+# ----------------------------------------------------------------------------
+# Local environment and credentials
+# Never commit secrets, signing material, or private keys.
+# ----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.der
+AuthKey_*.p8
+
+# Optional third-party configuration that may contain project identifiers or
+# credentials. Add an intentional exception if a future project requires it.
+GoogleService-Info.plist
+
+# ----------------------------------------------------------------------------
+# Local agent/tool state
+# Tracked project guidance remains in AGENTS.md and docs/agents/.
+# ----------------------------------------------------------------------------
+/.codex/
+/.claude/settings.local.json
+/.cursor/
+
+# ----------------------------------------------------------------------------
+# Common generated archives and exported artifacts
+# ----------------------------------------------------------------------------
+*.app
+*.framework
+*.xcframework
+*.zip
+*.tar
+*.tar.gz
+
+# Keep intentional repository examples and documentation assets visible.
+!.env.example
+!docs/**/*.md
