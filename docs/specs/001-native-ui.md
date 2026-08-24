@@ -11,10 +11,10 @@ connected.
 Use a small native navigation structure:
 
 - `Journals` — the primary list and entry creation flow.
-- `History` — dated AI insight snapshots.
+- `Insight` — a dedicated page reached from one journal's detail.
 
 Use `NavigationStack` for detail and editor states. Avoid adding settings,
-onboarding, accounts, or extra tabs in the first version.
+onboarding, accounts, or tabs in the first version.
 
 ## Required UI states
 
@@ -38,15 +38,15 @@ onboarding, accounts, or extra tabs in the first version.
 
 - full journal text;
 - date and edit action;
-- reserved presentation area for generated insights without calling the model;
-- clear empty state when no insights exist.
+- a clear action that opens the journal's separate Insight page.
 
-### History
+### Insight
 
-- dated list of mock insight snapshots;
-- summary, reflection, and digest sections in a readable detail view;
-- empty state when no History exists;
-- visible relationship between an insight snapshot and its source journal date.
+- dedicated presentation away from the journal input and reading surface;
+- story essence, reflection space, and developing-pattern sections;
+- clear empty, generating, result, and unavailable states;
+- results remain associated with their source journal and are reopened through
+  that journal's detail.
 
 ## Design direction
 
@@ -61,14 +61,14 @@ onboarding, accounts, or extra tabs in the first version.
 
 - SwiftData integration;
 - Foundation Models calls;
-- real History persistence;
+- real insight persistence;
 - authentication or sync;
 - custom animations that do not support comprehension;
 - settings and theming systems.
 
 ## Acceptance criteria
 
-- A user can navigate between Journals and History.
+- A user can navigate from a journal to its dedicated Insight page.
 - A user can preview the create, read, edit, and delete flows using mock data.
 - Empty, populated, and loading-like presentation states are represented.
 - The UI uses native Apple components and works with Dynamic Type.

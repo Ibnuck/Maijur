@@ -10,7 +10,8 @@ features are implemented.
 MaiJur is a local-first iPhone journaling app. The initial product supports:
 
 - creating, reading, editing, and deleting journal entries;
-- viewing generated summary, reflection, and digest snapshots in History;
+- viewing each journal's generated story essence, reflection, and developing
+  patterns from that journal's detail flow;
 - optional on-device Foundation Models processing when the device and model are
   available.
 

@@ -9,7 +9,7 @@ findings.
 | G0 | Project foundation and agent workflow | P0 | Complete | — |
 | G1 | Native UI with mock data | P0 | Next | G0 |
 | G2 | Local journaling CRUD | P0 | Backlog | G1 |
-| G3 | History snapshots | P1 | Backlog | G2 |
+| G3 | Per-journal insight snapshots | P1 | Backlog | G2 |
 | G4 | Foundation Models generation | P1 | Backlog | G3 |
 | G5 | Quality, accessibility, and performance | P1 | Backlog | G4 |
 
@@ -40,9 +40,10 @@ See `G1-native-ui.md` and `specs/001-native-ui.md`.
 Connect the UI to local persistence and implement create, read, edit, and
 delete. See `G2-local-journaling.md` and `specs/002-local-journaling.md`.
 
-### G3 — History snapshots
+### G3 — Per-journal insight snapshots
 
-Add the local model and UI for dated summary, reflection, and digest snapshots.
+Add local insight storage and a dedicated Insight page reached from each
+journal. No global History tab is required.
 See `G3-history-snapshot.md` and `specs/003-history.md`.
 
 ### G4 — Foundation Models

@@ -19,8 +19,8 @@ final class MaijurUITests: XCTestCase {
         app.launchArguments = ["-ui-testing"]
         app.launch()
 
-        XCTAssertTrue(app.tabBars.buttons["Jurnal"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.tabBars.buttons["Riwayat"].exists)
+        XCTAssertTrue(app.navigationBars["Jurnal"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.tabBars.firstMatch.exists)
         XCTAssertTrue(app.buttons["new-journal-button"].exists)
 
         app.buttons["new-journal-button"].tap()

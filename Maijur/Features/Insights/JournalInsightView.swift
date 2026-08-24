@@ -124,12 +124,12 @@ private struct InsightIntroduction: View {
 
             InsightFeatureRow(
                 icon: "text.alignleft",
-                title: "Ringkasan",
+                title: "Inti Cerita",
                 description: "Inti pengalamanmu dalam bentuk yang lebih mudah dipahami."
             )
             InsightFeatureRow(
                 icon: "quote.bubble",
-                title: "Refleksi personal",
+                title: "Ruang Refleksi",
                 description: "Sudut pandang hangat untuk membantu mengenali pikiran dan perasaanmu."
             )
             InsightFeatureRow(
@@ -181,7 +181,7 @@ private struct InsightLoadingView: View {
             VStack(spacing: 5) {
                 Text("Menyiapkan insight personal…")
                     .font(.headline)
-                Text("MaiJur sedang merangkum, merefleksikan, dan memperbarui rangkumanmu.")
+                Text("MaiJur sedang memahami cerita, menyusun refleksi, dan mengenali pola yang berkembang.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -200,26 +200,26 @@ struct InsightResultCards: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Label("Tersimpan di Riwayat", systemImage: "checkmark.circle.fill")
+            Label("Tersimpan bersama jurnal", systemImage: "checkmark.circle.fill")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.green)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             InsightResultCard(
                 icon: "text.alignleft",
-                title: "Ringkasan",
+                title: "Inti Cerita",
                 text: snapshot.summary,
                 color: .blue
             )
             InsightResultCard(
                 icon: "quote.bubble.fill",
-                title: "Refleksi",
+                title: "Ruang Refleksi",
                 text: snapshot.reflection,
                 color: .purple
             )
             InsightResultCard(
                 icon: "point.3.connected.trianglepath.dotted",
-                title: "Rangkuman",
+                title: "Pola yang Berkembang",
                 text: snapshot.digest,
                 color: .orange
             )

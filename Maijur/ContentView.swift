@@ -11,20 +11,8 @@ struct ContentView: View {
     let store: JournalStore
 
     var body: some View {
-        TabView {
-            NavigationStack {
-                JournalsView(store: store)
-            }
-            .tabItem {
-                Label("Jurnal", systemImage: "book.closed")
-            }
-
-            NavigationStack {
-                HistoryView(store: store)
-            }
-            .tabItem {
-                Label("Riwayat", systemImage: "clock.arrow.circlepath")
-            }
+        NavigationStack {
+            JournalsView(store: store)
         }
         .alert(
             "Jurnal Tidak Dapat Disimpan",
