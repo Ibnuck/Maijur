@@ -3,8 +3,8 @@
 ## Goal
 
 Add optional on-device generation for a journal summary, personal reflection,
-and rolling digest while preserving local-first journaling and the History
-snapshot contract.
+and rolling digest while preserving local-first journaling and the per-journal
+insight snapshot contract.
 
 ## Session design
 
@@ -62,9 +62,9 @@ constraints belong in instructions, not inside untrusted journal text.
 
 ## Availability and failure behavior
 
-- The journal and local History features remain usable when the model is
+- Journals and previously saved insights remain usable when the model is
   unavailable, unsupported, busy, or unable to complete a request.
-- Save only completed, valid structured output as a new History snapshot.
+- Save only completed, valid structured output as an insight snapshot.
 - Keep the source journal even if generation fails.
 - Log diagnostics locally without logging full private journal text by default.
 - Validate Indonesian output quality and device language/model availability on
@@ -82,7 +82,7 @@ constraints belong in instructions, not inside untrusted journal text.
 
 - Summary, reflection, and digest are generated through the defined session
   boundaries.
-- A successful run creates the corresponding History snapshot.
+- A successful run creates the corresponding per-journal insight snapshot.
 - A failed run never deletes or corrupts the source journal.
 - Previously processed raw journals are not repeatedly included in the next
   request when the rolling digest is sufficient.

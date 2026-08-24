@@ -1,24 +1,25 @@
-# G3 — History Snapshots
+# G3 — Per-Journal Insight Snapshots
 
 ## Objective
 
-Add the local History archive for generated outputs before connecting the real
-Foundation Models pipeline.
+Store generated output locally and make it available from the source journal's
+dedicated Insight page.
 
 ## Tasks
 
-- [ ] Define the History snapshot model and source-journal relationship.
+- [ ] Define the insight snapshot model and source-journal relationship.
 - [ ] Store summary, reflection, digest, date, revision, and coverage metadata.
-- [ ] Add a local History repository or data boundary.
-- [ ] Connect the accepted History UI to mock-to-real local snapshots.
+- [ ] Add a local insight repository or data boundary.
+- [ ] Connect the dedicated Insight UI to local snapshots.
 - [ ] Preserve older snapshots when a journal is edited.
 - [ ] Delete private derived snapshots when the source journal is deleted.
-- [ ] Verify History remains readable without a model call.
+- [ ] Verify an existing insight remains readable without another model call.
 - [ ] Create a fresh reviewer after each task and after the goal.
 
 ## Acceptance criteria
 
-- A History snapshot can be saved, listed, opened, and read after relaunch.
+- An insight snapshot can be saved, opened from its journal, and read after
+  relaunch.
 - Each snapshot has a clear date and source journal relationship.
 - Summary, reflection, and digest are displayed distinctly.
 - Privacy behavior for edit and delete is deterministic.

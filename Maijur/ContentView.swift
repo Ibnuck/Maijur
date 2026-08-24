@@ -8,17 +8,34 @@
 import SwiftUI
 
 struct ContentView: View {
+    let store: JournalStore
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        ZStack {
+            NavigationStack {
+                JournalsView(store: store)
+            }
+
+            if let persistenceError = store.persistenceError {
+                MaiJurAlert(
+                    symbol: "externaldrive.badge.exclamationmark",
+                    tint: .orange,
+                    title: "Perubahan belum tersimpan",
+                    message: persistenceError,
+                    primaryTitle: "Tutup",
+                    primaryRole: nil,
+                    primaryAction: store.clearPersistenceError
+                )
+                .zIndex(20)
+            }
         }
-        .padding()
     }
 }
 
-#Preview {
-    ContentView()
+#Preview("Populated") {
+    ContentView(store: MockData.populatedStore())
+}
+
+#Preview("Empty") {
+    ContentView(store: MockData.emptyStore())
 }
