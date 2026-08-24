@@ -12,7 +12,11 @@ struct JournalEditorView: View {
     init(store: JournalStore, entry: JournalEntry? = nil) {
         self.store = store
         self.entry = entry
-        _draft = State(initialValue: entry.map(JournalDraft.init(entry:)) ?? JournalDraft(date: .now, text: ""))
+        if let entry {
+            _draft = State(initialValue: JournalDraft(entry: entry))
+        } else {
+            _draft = State(initialValue: JournalDraft(date: .now, text: ""))
+        }
     }
 
     private var hasChanges: Bool {
