@@ -2,25 +2,27 @@ import Foundation
 
 @MainActor
 enum MockData {
-    static func populatedStore() -> MockJournalStore {
-        MockJournalStore(journals: journals, history: history)
+    static var previewJournal: JournalEntry { journals[0] }
+
+    static func populatedStore() -> JournalStore {
+        JournalStore(journals: journals, history: history)
     }
 
-    static func emptyStore() -> MockJournalStore {
-        MockJournalStore()
+    static func emptyStore() -> JournalStore {
+        JournalStore()
     }
 
-    static func loadingStore() -> MockJournalStore {
-        MockJournalStore(journalsPhase: .loading, historyPhase: .loading)
+    static func loadingStore() -> JournalStore {
+        JournalStore(journalsPhase: .loading, historyPhase: .loading)
     }
 
-    static func unavailableInsightStore() -> MockJournalStore {
-        MockJournalStore(journals: journals)
+    static func unavailableInsightStore() -> JournalStore {
+        JournalStore(journals: journals)
     }
 
-    static func insightLoadingStore() -> MockJournalStore {
+    static func insightLoadingStore() -> JournalStore {
         let journal = journals[0]
-        return MockJournalStore(
+        return JournalStore(
             journals: [journal],
             insightLoadingJournalIDs: [journal.id]
         )

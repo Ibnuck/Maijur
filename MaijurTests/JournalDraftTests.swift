@@ -55,3 +55,25 @@ struct JournalDraftTests {
         #expect(draft.isDirty(comparedTo: original))
     }
 }
+
+@Suite("Journal analysis input")
+struct JournalAnalysisInputTests {
+
+    @Test("Short journal remains one analysis chunk")
+    func shortJournalRemainsWhole() {
+        #expect(JournalAnalysisInput.chunks(from: "A short journal.") == ["A short journal."])
+    }
+
+    @Test("Long journal keeps paragraph content across chunks")
+    func longJournalIsChunkedWithoutContentLoss() {
+        let first = String(repeating: "First paragraph. ", count: 150)
+        let second = String(repeating: "Second paragraph. ", count: 150)
+        let text = "\(first)\n\n\(second)"
+        let chunks = JournalAnalysisInput.chunks(from: text)
+
+        #expect(chunks.count > 1)
+        #expect(chunks.allSatisfy { $0.count <= JournalAnalysisInput.maximumCharactersPerChunk })
+        #expect(chunks.joined(separator: " ").contains("First paragraph."))
+        #expect(chunks.joined(separator: " ").contains("Second paragraph."))
+    }
+}

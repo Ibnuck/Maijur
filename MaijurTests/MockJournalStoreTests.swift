@@ -1,23 +1,24 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import Maijur
 
-@Suite("Mock journal store")
+@Suite("Journal store")
 @MainActor
-struct MockJournalStoreTests {
+struct JournalStoreTests {
 
     @Test("Journals are exposed newest first")
     func journalsAreNewestFirst() {
         let older = journal(id: 1, timestamp: 1_700_000_000, text: "Older")
         let newer = journal(id: 2, timestamp: 1_800_000_000, text: "Newer")
-        let store = MockJournalStore(journals: [older, newer])
+        let store = JournalStore(journals: [older, newer])
 
         #expect(store.journals.map(\.id) == [newer.id, older.id])
     }
 
     @Test("Creating rejects whitespace-only text")
     func creatingWhitespaceOnlyTextFails() {
-        let store = MockJournalStore()
+        let store = JournalStore()
 
         let created = store.createJournal(
             date: Date(timeIntervalSince1970: 1_800_000_000),
@@ -30,7 +31,7 @@ struct MockJournalStoreTests {
 
     @Test("Creating preserves meaningful text")
     func creatingPreservesMeaningfulText() throws {
-        let store = MockJournalStore()
+        let store = JournalStore()
         let text = "  A meaningful entry.  "
 
         let created = try #require(
@@ -47,7 +48,7 @@ struct MockJournalStoreTests {
     @Test("Updating keeps the identifier and changes date and text")
     func updatingKeepsIdentifier() throws {
         let original = journal(id: 1, timestamp: 1_700_000_000, text: "Before")
-        let store = MockJournalStore(journals: [original])
+        let store = JournalStore(journals: [original])
         let newDate = Date(timeIntervalSince1970: 1_800_000_000)
 
         let updated = try #require(
@@ -68,15 +69,15 @@ struct MockJournalStoreTests {
     func deletingRemovesOnlySelectedJournal() {
         let first = journal(id: 1, timestamp: 1_700_000_000, text: "First")
         let second = journal(id: 2, timestamp: 1_800_000_000, text: "Second")
-        let store = MockJournalStore(journals: [first, second])
+        let store = JournalStore(journals: [first, second])
 
         store.deleteJournal(id: second.id)
 
         #expect(store.journals == [first])
     }
 
-    @Test("Deleting a journal preserves its History snapshot")
-    func deletingJournalPreservesHistory() {
+    @Test("Deleting a journal removes its private History snapshot")
+    func deletingJournalRemovesDerivedHistory() {
         let entry = journal(id: 1, timestamp: 1_700_000_000, text: "Source")
         let snapshot = HistorySnapshot(
             id: UUID(uuidString: "30000000-0000-0000-0000-000000000001")!,
@@ -87,12 +88,45 @@ struct MockJournalStoreTests {
             reflection: "Reflection",
             digest: "Digest"
         )
-        let store = MockJournalStore(journals: [entry], history: [snapshot])
+        let store = JournalStore(journals: [entry], history: [snapshot])
 
         store.deleteJournal(id: entry.id)
 
         #expect(store.journals.isEmpty)
+        #expect(store.history.isEmpty)
+    }
+
+    @Test("Local store keeps journals and removes derived insights")
+    func localStorePersistsJournalAndCleansUpHistory() throws {
+        let container = try ModelContainer(
+            for: StoredJournal.self,
+            StoredHistorySnapshot.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let store = JournalStore(modelContext: container.mainContext)
+        let journal = try #require(
+            store.createJournal(
+                date: Date(timeIntervalSince1970: 1_800_000_000),
+                text: "A locally saved entry"
+            )
+        )
+
+        let secondStore = JournalStore(modelContext: container.mainContext)
+        #expect(secondStore.journals == [journal])
+
+        let snapshot = try #require(
+            store.saveHistory(
+                for: journal.id,
+                summary: "Summary",
+                reflection: "Reflection",
+                digest: "Digest"
+            )
+        )
         #expect(store.history == [snapshot])
+
+        #expect(store.deleteJournal(id: journal.id))
+        #expect(store.journals.isEmpty)
+        #expect(store.history.isEmpty)
     }
 
     private func journal(id: UInt8, timestamp: TimeInterval, text: String) -> JournalEntry {

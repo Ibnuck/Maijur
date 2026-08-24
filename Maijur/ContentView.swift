@@ -8,73 +8,36 @@
 import SwiftUI
 
 struct ContentView: View {
-    let store: MockJournalStore
+    let store: JournalStore
 
     var body: some View {
         TabView {
             NavigationStack {
-                journalsRoot
-                    .navigationTitle("Journals")
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("New Journal", systemImage: "square.and.pencil") {}
-                                .accessibilityLabel("New Journal")
-                                .accessibilityIdentifier("new-journal-button")
-                        }
-                    }
+                JournalsView(store: store)
             }
             .tabItem {
-                Label("Journals", systemImage: "book.closed")
-                    .accessibilityIdentifier("journals-tab")
+                Label("Jurnal", systemImage: "book.closed")
             }
 
             NavigationStack {
-                historyRoot
-                    .navigationTitle("History")
+                HistoryView(store: store)
             }
             .tabItem {
-                Label("History", systemImage: "clock.arrow.circlepath")
-                    .accessibilityIdentifier("history-tab")
+                Label("Riwayat", systemImage: "clock.arrow.circlepath")
             }
         }
-    }
-
-    @ViewBuilder
-    private var journalsRoot: some View {
-        switch store.journalsPhase {
-        case .loading:
-            ProgressView("Loading Journals")
-        case .loaded where store.journals.isEmpty:
-            ContentUnavailableView(
-                "No Journals",
-                systemImage: "book.closed",
-                description: Text("New journal entries will appear here.")
+        .alert(
+            "Jurnal Tidak Dapat Disimpan",
+            isPresented: Binding(
+                get: { store.persistenceError != nil },
+                set: { if !$0 { store.clearPersistenceError() } }
             )
-        case .loaded:
-            List(store.journals) { journal in
-                Text(journal.text)
-                    .lineLimit(2)
+        ) {
+            Button("Mengerti", role: .cancel) {
+                store.clearPersistenceError()
             }
-            .accessibilityIdentifier("journals-root-populated")
-        }
-    }
-
-    @ViewBuilder
-    private var historyRoot: some View {
-        switch store.historyPhase {
-        case .loading:
-            ProgressView("Loading History")
-        case .loaded where store.history.isEmpty:
-            ContentUnavailableView(
-                "No History",
-                systemImage: "clock.arrow.circlepath",
-                description: Text("Insight snapshots will appear here.")
-            )
-        case .loaded:
-            List(store.history) { snapshot in
-                Text(snapshot.summary)
-                    .lineLimit(2)
-            }
+        } message: {
+            Text(store.persistenceError ?? "Silakan coba lagi.")
         }
     }
 }
