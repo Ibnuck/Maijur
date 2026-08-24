@@ -3,26 +3,26 @@
 ## Project identity
 
 MaiJur is a small, native iPhone journaling app. It helps a person create,
-read, edit, and delete personal journal entries. Foundation Models may later
-generate a summary, a personal reflection, and a rolling digest. The core app
-must remain useful without an account, a server, or an internet connection.
+read, edit, and delete personal journal entries. Foundation Models optionally
+generate per-journal insights and an incremental overall insight. The core app
+remains useful without an account, a server, or an internet connection.
 
 The target test device is iPhone 17. The UI should feel native to Apple
 platforms and should use Apple frameworks before introducing any dependency.
 
 ## Current phase
 
-The repository is currently in the documentation and skeleton phase. The first
-implementation goal is the UI using mock data. Do not implement persistence or
-Foundation Models before the native UI goal is accepted.
+The initial MVP implementation through G4 is complete: native UI, local CRUD,
+per-journal insight persistence, and Foundation Models generation are present.
+G5 quality, accessibility, and performance validation is the next goal. Avoid
+adding new product features until that validation is complete.
 
 The source of truth is organized as follows:
 
 - `docs/goals/` — ordered goals and task checklists.
 - `docs/specs/` — behavior and technical requirements for each goal.
-- `docs/agents/` — role-specific instructions for the engineering loop.
-- `docs/workflow/engineering-loop.md` — the required brainstorm → implement →
-  fresh review cycle.
+- `docs/agents/` and `docs/workflow/` — archived references for the earlier
+  engineering-loop experiment; they are not mandatory for current work.
 - `docs/decisions/` — decisions that should not be rediscovered repeatedly.
 
 ## Engineering principles
@@ -52,47 +52,44 @@ The source of truth is organized as follows:
 - Journals and generated insights are local data by default.
 - No account, authentication, server sync, or analytics is part of the initial
   product.
-- Keep the number of screens small. The initial navigation can use two primary
-  destinations: Journals and History, with push navigation or sheets for
-  editor/detail states.
+- Keep the number of screens small. Journals is the single root destination;
+  journal detail, per-journal Insight, and Overall Insight are reached from it.
+- There is no global History tab. A saved per-journal insight is reopened from
+  its source journal.
 - The user must be able to journal even when Foundation Models are unavailable.
 - Do not silently discard journal text when an AI request cannot fit the
   runtime context window.
 
 ## Foundation Models constraints
 
-- Summary and reflection use separate `LanguageModelSession` instances so each
-  task has a clear role and a smaller transcript.
-- The current journal is sent once to the summary session. A reflection uses
-  the new summary plus the latest rolling digest, not every raw historical
-  journal.
-- The digest is both an application-memory input for future requests and a
-  user-visible snapshot stored in History.
+- Summary, reflection, and theme extraction use separate
+  `LanguageModelSession` instances so each task has a clear role and a smaller
+  transcript.
+- The current journal is sent to the summary task. Reflection and themes use
+  that summary plus date metadata; they do not receive raw historical journals.
+- Overall Insight is updated from its previous stored result and at most three
+  new dated per-journal insights per session. Previously covered insight IDs
+  are not sent again.
+- Editing a journal deletes its outdated derived insight. If Overall Insight
+  covered that result, it is invalidated so stale conclusions are not shown.
 - Use a simple `@Generable` schema. Keep property names and descriptions short
   because the schema contributes to the context window.
 - Put trusted role and behavior in instructions. Put journal text and other
   user-controlled content in prompts.
 - Include journal dates and coverage metadata in prompts and stored records;
   do not rely on the model alone to determine recency.
-- Measure token usage at runtime. Initial budgets are hypotheses to validate on
-  the target device, not permanent product guarantees.
+- The editor currently enforces a 2,400-character product limit. Keep runtime
+  context and output measurement as a G5 validation task rather than assuming
+  the character limit is an exact token guarantee.
 - Keep the UI in a usable state when the model is unavailable, unsupported, or
   returns an error.
 
-## Engineering loop
+## Working approach
 
-Every task or goal follows the workflow in `docs/workflow/engineering-loop.md`:
-
-1. A brainstorming agent defines scope, acceptance criteria, and risks.
-2. The implementer works only on the approved active task.
-3. A new reviewer subagent is created with clean context for each completed
-   task or goal.
-4. The reviewer evaluates the spec, diff, tests, and acceptance criteria.
-5. The task is complete only after review findings are resolved and verification
-   evidence exists.
-
-The reviewer must not inherit the brainstorming or implementation transcript.
-The reviewer may request changes but does not silently modify the code.
+Use a direct implementation and verification workflow appropriate for this
+small project. The earlier multi-agent engineering loop remains documented for
+reference but is not required. Keep changes scoped, verify them proportionally,
+and do not claim a build or test passed without evidence.
 
 ## Change boundaries
 
