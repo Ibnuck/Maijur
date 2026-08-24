@@ -32,5 +32,11 @@ final class MaijurUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["A quiet walk gave me space to think."].waitForExistence(timeout: 3))
         XCTAssertTrue(app.descendants(matching: .any)["journals-root-populated"].exists)
+
+        app.staticTexts["A quiet walk gave me space to think."].tap()
+        XCTAssertTrue(app.buttons["open-insights-button"].waitForExistence(timeout: 3))
+        app.buttons["open-insights-button"].tap()
+        XCTAssertTrue(app.buttons["create-insights-button"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.descendants(matching: .any)["journal-detail-text"].exists)
     }
 }
