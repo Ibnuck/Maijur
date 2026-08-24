@@ -74,4 +74,76 @@ final class MaijurUITests: XCTestCase {
         app.buttons["Lanjut Menulis"].tap()
         XCTAssertTrue(editedText.exists)
     }
+
+    @MainActor
+    func testUnsavedJournalCannotBeDismissedBySwipe() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+
+        app.buttons["new-journal-button"].tap()
+        let editor = app.textViews["journal-text-editor"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 3))
+        editor.tap()
+        editor.typeText("This draft should remain on screen.")
+
+        app.swipeDown()
+
+        XCTAssertTrue(editor.waitForExistence(timeout: 2))
+        XCTAssertEqual(editor.value as? String, "This draft should remain on screen.")
+    }
+
+    @MainActor
+    func testEditorSupportsAccessibilityDynamicType() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing",
+            "-UIPreferredContentSizeCategoryName",
+            "UICTContentSizeCategoryAccessibilityExtraExtraExtraLarge"
+        ]
+        app.launch()
+
+        app.buttons["new-journal-button"].tap()
+
+        XCTAssertTrue(app.textViews["journal-text-editor"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["save-journal-button"].exists)
+        XCTAssertTrue(app.buttons["Batal"].exists)
+    }
+
+    @MainActor
+    func testMainJournalScreenAccessibilitySemantics() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+
+        XCTAssertTrue(app.navigationBars["Jurnal"].waitForExistence(timeout: 3))
+        try app.performAccessibilityAudit(for: [
+            .hitRegion,
+            .sufficientElementDescription,
+            .trait
+        ])
+    }
+
+    @MainActor
+    func testLaunchPerformance() throws {
+        measure(metrics: [XCTApplicationLaunchMetric()]) {
+            let app = XCUIApplication()
+            app.launchArguments = ["-ui-testing"]
+            app.launch()
+        }
+    }
+
+    @MainActor
+    func testJournalListScrollPerformance() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-long-list"]
+        app.launch()
+
+        let list = app.collectionViews.firstMatch
+        XCTAssertTrue(list.waitForExistence(timeout: 3))
+
+        measure(metrics: [XCTOSSignpostMetric.scrollDecelerationMetric]) {
+            list.swipeUp(velocity: .fast)
+        }
+    }
 }

@@ -36,6 +36,7 @@ struct JournalInsightView: View {
                 .frame(maxWidth: .infinity)
             }
         }
+        .accessibilityHidden(generationError != nil)
         .navigationTitle("Insight")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
@@ -105,6 +106,7 @@ private struct InsightHero: View {
                 .frame(width: 72, height: 72)
                 .background(Color.indigo.gradient, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .shadow(color: Color.indigo.opacity(0.18), radius: 16, y: 7)
+                .accessibilityHidden(true)
 
             VStack(spacing: 6) {
                 Text(hasResult ? "Ruang refleksimu" : "Kenali ceritamu lebih dalam")
@@ -219,6 +221,9 @@ private struct InsightLoadingView: View {
                 .stroke(Color.primary.opacity(0.06), lineWidth: 1)
         }
         .accessibilityIdentifier("insight-loading-view")
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Menyiapkan insight personal")
+        .accessibilityValue("MaiJur sedang memahami cerita, menyusun refleksi, dan mengenali tema.")
     }
 }
 
@@ -296,6 +301,7 @@ struct InsightPageBackground: View {
                 .offset(x: 100, y: -140)
         }
         .ignoresSafeArea()
+        .accessibilityHidden(true)
     }
 }
 

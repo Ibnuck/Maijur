@@ -1,7 +1,6 @@
 # MaiJur Goal Roadmap
 
-The initial feature goals G0–G4 are implemented. G5 is the active quality pass
-before the personal-project MVP is considered finished.
+The initial personal-project MVP goals G0–G5 are implemented and verified.
 
 | ID | Goal | Priority | Status | Depends on |
 |---|---|---:|---|---|
@@ -10,7 +9,7 @@ before the personal-project MVP is considered finished.
 | G2 | Local journaling CRUD | P0 | Complete | G1 |
 | G3 | Per-journal insight snapshots | P1 | Complete | G2 |
 | G4 | Foundation Models generation | P1 | Complete | G3 |
-| G5 | Quality, accessibility, and performance | P1 | Next | G4 |
+| G5 | Quality, accessibility, and performance | P1 | Complete | G4 |
 
 ## Status definitions
 

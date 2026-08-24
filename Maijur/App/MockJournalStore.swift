@@ -54,10 +54,13 @@ final class JournalStore {
     }
 
     var currentJournalInsights: [HistorySnapshot] {
+        let journalsByID = journals.reduce(into: [UUID: JournalEntry]()) { result, journal in
+            result[journal.id] = journal
+        }
         var seenJournalIDs = Set<UUID>()
         return history
             .filter { snapshot in
-                guard let journal = journals.first(where: { $0.id == snapshot.sourceJournalID }),
+                guard let journal = journalsByID[snapshot.sourceJournalID],
                       snapshot.belongsToCurrentRevision(of: journal),
                       snapshot.isCompatible(with: JournalAnalysisService.promptVersion),
                       seenJournalIDs.insert(snapshot.sourceJournalID).inserted

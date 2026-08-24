@@ -1,7 +1,7 @@
 # MaiJur Documentation
 
 This folder is the working source of truth for MaiJur. The initial MVP feature
-set through G4 is implemented; G5 quality validation is next. These documents
+set through G5 is implemented and verified. These documents
 keep product decisions, specifications, and ordered goals separate from the
 Swift source code.
 
@@ -25,9 +25,9 @@ docs/
 4. Verify the change with the smallest relevant build, test, or device check.
 5. Update the goal and any affected decision when actual behavior changes.
 
-The active goal is `G5 — Quality, Accessibility, and Performance`. G1–G4
-describe the implemented MVP foundation and should not be reopened to add new
-scope unless a defect requires it.
+The initial roadmap through `G5 — Quality, Accessibility, and Performance` is
+complete. Completed goals should not be reopened to add new scope unless a
+defect requires it.
 
 ## Scope rule
 

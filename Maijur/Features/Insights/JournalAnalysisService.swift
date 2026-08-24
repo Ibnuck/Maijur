@@ -1,14 +1,25 @@
 import Foundation
 import FoundationModels
+import OSLog
 
 @available(iOS 26.0, *)
 struct JournalAnalysisService {
     static let promptVersion = "journal-insights-v5"
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "MaiJur",
+        category: "FoundationModels"
+    )
 
     func generate(for journal: JournalEntry) async throws -> JournalAnalysis {
         let model = SystemLanguageModel.default
         guard model.isAvailable else {
             throw JournalAnalysisError.modelUnavailable
+        }
+
+        let startedAt = Date()
+        defer {
+            let duration = String(format: "%.2f", Date().timeIntervalSince(startedAt))
+            Self.logger.info("Journal insight request ended after \(duration, privacy: .public) seconds")
         }
 
         let summary = try await makeSummary(for: journal)
