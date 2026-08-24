@@ -36,20 +36,26 @@ struct JournalEditorView: View {
                 JournalEditorBackground()
 
                 ScrollView {
-                    VStack(spacing: 18) {
-                        JournalEditorHeader(date: $draft.date, isNewEntry: entry == nil)
+                    VStack(spacing: 14) {
+                        JournalDateRow(date: $draft.date)
 
-                        JournalWritingCard(
+                        JournalWritingSurface(
                             text: limitedText,
                             characterCount: draft.characterCount,
                             remainingCount: draft.remainingCharacterCount,
                             progress: draft.characterLimitProgress,
                             isFocused: $isWritingFocused
                         )
+
+                        Label("Jurnalmu tersimpan secara lokal di perangkat ini.", systemImage: "lock.fill")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 4)
                     }
                     .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .padding(.bottom, 24)
+                    .padding(.top, 8)
+                    .padding(.bottom, 20)
                     .frame(maxWidth: 700)
                     .frame(maxWidth: .infinity)
                 }
@@ -62,15 +68,23 @@ struct JournalEditorView: View {
                         requestDismissal()
                     }
                 }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Simpan") {
+                        save()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(!draft.isValid)
+                    .accessibilityIdentifier("save-journal-button")
+                }
                 ToolbarItemGroup(placement: .keyboard) {
+                    Text("\(draft.characterCount.formatted()) / \(JournalDraft.maximumCharacterCount.formatted())")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
                     Spacer()
                     Button("Selesai") {
                         isWritingFocused = false
                     }
                 }
-            }
-            .safeAreaInset(edge: .bottom) {
-                JournalSaveBar(isEnabled: draft.isValid, isEditing: entry != nil, save: save)
             }
             .confirmationDialog(
                 "Buang perubahan?",
@@ -83,9 +97,6 @@ struct JournalEditorView: View {
                 Button("Lanjut Menulis", role: .cancel) {}
             } message: {
                 Text("Perubahan yang belum disimpan akan hilang.")
-            }
-            .onAppear {
-                isWritingFocused = true
             }
         }
     }
@@ -117,78 +128,47 @@ struct JournalEditorView: View {
 
 private struct JournalEditorBackground: View {
     var body: some View {
-        LinearGradient(
-            colors: [
-                Color.indigo.opacity(0.10),
-                Color.cyan.opacity(0.05),
-                Color(.systemGroupedBackground)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+        ZStack(alignment: .topTrailing) {
+            Color(.systemGroupedBackground)
+            Circle()
+                .fill(Color.indigo.opacity(0.08))
+                .frame(width: 260, height: 260)
+                .blur(radius: 50)
+                .offset(x: 100, y: -140)
+        }
         .ignoresSafeArea()
     }
 }
 
-private struct JournalEditorHeader: View {
+private struct JournalDateRow: View {
     @Binding var date: Date
-    let isNewEntry: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(spacing: 14) {
-                Image(systemName: isNewEntry ? "pencil.and.scribble" : "book.pages.fill")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 52, height: 52)
-                    .background(
-                        LinearGradient(
-                            colors: [.indigo, .blue],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    )
+        HStack(spacing: 12) {
+            Image(systemName: "calendar")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.indigo)
+                .frame(width: 38, height: 38)
+                .background(Color.indigo.opacity(0.10), in: Circle())
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(isNewEntry ? "Satu halaman untuk hari ini" : "Kembali ke ceritamu")
-                        .font(.headline)
-                    Text("Tulis apa adanya. Halaman ini hanya milikmu.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            }
+            Text("Tanggal jurnal")
+                .font(.subheadline.weight(.semibold))
 
-            Divider()
+            Spacer(minLength: 8)
 
-            HStack(spacing: 12) {
-                Label("Tanggal cerita", systemImage: "calendar")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                Spacer(minLength: 8)
-
-                DatePicker(
-                    "Tanggal jurnal",
-                    selection: $date,
-                    displayedComponents: .date
-                )
+            DatePicker("Tanggal jurnal", selection: $date, displayedComponents: .date)
                 .labelsHidden()
                 .datePickerStyle(.compact)
                 .accessibilityLabel("Tanggal jurnal")
                 .accessibilityIdentifier("journal-date-picker")
-            }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(Color.indigo.opacity(0.12), lineWidth: 1)
-        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
 
-private struct JournalWritingCard: View {
+private struct JournalWritingSurface: View {
     @Binding var text: String
     let characterCount: Int
     let remainingCount: Int
@@ -204,40 +184,29 @@ private struct JournalWritingCard: View {
     private var meterMessage: String {
         if progress >= 1 { return "Batas tercapai" }
         if progress >= 0.85 { return "\(remainingCount.formatted()) tersisa" }
-        if characterCount == 0 { return "Mulai dari hal kecil" }
-        return "Masih ada ruang"
+        return "Maks. \(JournalDraft.maximumCharacterCount.formatted())"
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .firstTextBaseline) {
-                Label("Ruang menulis", systemImage: "text.alignleft")
-                    .font(.headline)
-                    .foregroundStyle(.indigo)
-
-                Spacer()
-
-                Text(characterCount == 0 ? "Hari ini" : "Sedang ditulis")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(characterCount == 0 ? Color.secondary : Color.indigo)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(.thinMaterial, in: Capsule())
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Apa yang ingin kamu simpan hari ini?")
+                    .font(.title2.weight(.bold))
+                Text("Tidak perlu sempurna—cukup tulis apa yang sedang ada di pikiranmu.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
+
+            Divider()
 
             ZStack(alignment: .topLeading) {
                 if text.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Apa yang ingin kamu simpan dari hari ini?")
-                            .font(.title3.weight(.medium))
-                            .foregroundStyle(.secondary)
-                        Text("Pikiran, perasaan, kejadian kecil, atau sesuatu yang kamu syukuri…")
-                            .font(.body)
-                            .foregroundStyle(.tertiary)
-                    }
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 9)
-                    .allowsHitTesting(false)
+                    Text("Mulai menulis…")
+                        .font(.body)
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 9)
+                        .allowsHitTesting(false)
                 }
 
                 TextEditor(text: $text)
@@ -245,65 +214,39 @@ private struct JournalWritingCard: View {
                     .font(.body)
                     .lineSpacing(7)
                     .scrollContentBackground(.hidden)
-                    .frame(minHeight: 330, alignment: .topLeading)
+                    .frame(minHeight: 390, alignment: .topLeading)
                     .accessibilityLabel("Isi jurnal")
                     .accessibilityHint("Maksimal \(JournalDraft.maximumCharacterCount) karakter")
                     .accessibilityIdentifier("journal-text-editor")
             }
 
-            VStack(spacing: 8) {
+            Divider()
+
+            HStack(spacing: 12) {
                 ProgressView(value: progress)
                     .tint(meterColor)
+                    .frame(maxWidth: .infinity)
                     .animation(.easeOut(duration: 0.2), value: progress)
 
-                HStack {
-                    Text("\(characterCount.formatted()) / \(JournalDraft.maximumCharacterCount.formatted()) karakter")
-                        .monospacedDigit()
-                    Spacer()
-                    Text(meterMessage)
-                }
-                .font(.caption.weight(.medium))
-                .foregroundStyle(meterColor)
-                .contentTransition(.numericText())
+                Text("\(characterCount.formatted()) karakter")
+                    .monospacedDigit()
+                Text("•")
+                    .foregroundStyle(.tertiary)
+                Text(meterMessage)
             }
+            .font(.caption.weight(.medium))
+            .foregroundStyle(meterColor)
+            .contentTransition(.numericText())
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Penggunaan karakter")
             .accessibilityValue("\(characterCount) dari \(JournalDraft.maximumCharacterCount), \(remainingCount) tersisa")
-
-            Label(
-                "Batas ini menjaga ruang yang cukup untuk menghasilkan insight yang lebih utuh.",
-                systemImage: "sparkles"
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
         }
-        .padding(20)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .padding(18)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(Color.primary.opacity(0.06), lineWidth: 1)
         }
-        .shadow(color: Color.indigo.opacity(0.06), radius: 18, y: 8)
-    }
-}
-
-private struct JournalSaveBar: View {
-    let isEnabled: Bool
-    let isEditing: Bool
-    let save: () -> Void
-
-    var body: some View {
-        Button(action: save) {
-            Label(isEditing ? "Simpan Perubahan" : "Simpan Jurnal", systemImage: "checkmark")
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .disabled(!isEnabled)
-        .accessibilityIdentifier("save-journal-button")
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.bar)
+        .shadow(color: Color.black.opacity(0.03), radius: 12, y: 5)
     }
 }
