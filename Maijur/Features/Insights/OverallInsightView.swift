@@ -67,13 +67,22 @@ struct OverallInsightView: View {
                 .accessibilityIdentifier("create-overall-insight-button")
             }
         }
-        .alert("Insight Tidak Tersedia", isPresented: Binding(
-            get: { generationError != nil },
-            set: { if !$0 { generationError = nil } }
-        )) {
-            Button("Mengerti", role: .cancel) { generationError = nil }
-        } message: {
-            Text(generationError ?? "Silakan coba lagi.")
+        .overlay {
+            if let generationError {
+                MaiJurAlert(
+                    symbol: "sparkles.rectangle.stack",
+                    tint: .indigo,
+                    title: insight == nil
+                        ? "Insight belum dapat dibuat"
+                        : "Insight belum dapat diperbarui",
+                    message: generationError,
+                    primaryTitle: "Tutup",
+                    primaryRole: nil,
+                    primaryAction: {
+                        self.generationError = nil
+                    }
+                )
+            }
         }
     }
 
@@ -103,7 +112,7 @@ struct OverallInsightView: View {
                 modelVersion: "Apple on-device"
             )
         } catch {
-            generationError = error.localizedDescription
+            generationError = InsightAlertCopy.message(for: error)
         }
     }
 }

@@ -27,6 +27,10 @@ struct JournalEditorView: View {
         draft.isValid && (entry == nil || hasChanges)
     }
 
+    private var copy: JournalEditorCopy {
+        entry == nil ? .create : .edit
+    }
+
     private var limitedText: Binding<String> {
         Binding(
             get: { draft.text },
@@ -48,11 +52,12 @@ struct JournalEditorView: View {
                             characterCount: draft.characterCount,
                             remainingCount: draft.remainingCharacterCount,
                             progress: draft.characterLimitProgress,
-                            isEditing: entry != nil,
+                            title: copy.writingTitle,
+                            placeholder: copy.placeholder,
                             isFocused: $isWritingFocused
                         )
 
-                        Label("Jurnalmu tersimpan secara lokal di perangkat ini.", systemImage: "lock.fill")
+                        Label(copy.privacyNote, systemImage: "lock.fill")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -65,7 +70,7 @@ struct JournalEditorView: View {
                     .frame(maxWidth: .infinity)
                 }
             }
-            .navigationTitle(entry == nil ? "Jurnal Baru" : "Edit Jurnal")
+            .navigationTitle(copy.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -91,17 +96,22 @@ struct JournalEditorView: View {
                     }
                 }
             }
-            .confirmationDialog(
-                "Buang perubahan?",
-                isPresented: $showsDiscardConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Buang Perubahan", role: .destructive) {
-                    dismiss()
-                }
-                Button("Lanjut Menulis", role: .cancel) {}
-            } message: {
-                Text("Perubahan yang belum disimpan akan hilang.")
+        }
+        .overlay {
+            if showsDiscardConfirmation {
+                MaiJurAlert(
+                    symbol: "arrow.uturn.backward.circle.fill",
+                    tint: .red,
+                    title: copy.discardTitle,
+                    message: copy.discardMessage,
+                    primaryTitle: "Buang",
+                    primaryRole: .destructive,
+                    primaryAction: dismiss.callAsFunction,
+                    secondaryTitle: "Lanjut Menulis",
+                    secondaryAction: {
+                        showsDiscardConfirmation = false
+                    }
+                )
             }
         }
     }
@@ -178,7 +188,8 @@ private struct JournalWritingSurface: View {
     let characterCount: Int
     let remainingCount: Int
     let progress: Double
-    let isEditing: Bool
+    let title: String
+    let placeholder: String
     var isFocused: FocusState<Bool>.Binding
 
     private var meterColor: Color {
@@ -195,14 +206,14 @@ private struct JournalWritingSurface: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(isEditing ? "Perbarui jurnalmu" : "Apa yang ingin kamu ingat?")
+            Text(title)
                 .font(.title2.weight(.bold))
 
             Divider()
 
             ZStack(alignment: .topLeading) {
                 if text.isEmpty {
-                    Text(isEditing ? "Perbarui isi jurnal…" : "Mulai menulis ceritamu…")
+                    Text(placeholder)
                         .font(.body)
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 5)
@@ -250,4 +261,31 @@ private struct JournalWritingSurface: View {
         }
         .shadow(color: Color.black.opacity(0.03), radius: 12, y: 5)
     }
+}
+
+private struct JournalEditorCopy {
+    let navigationTitle: String
+    let writingTitle: String
+    let placeholder: String
+    let privacyNote: String
+    let discardTitle: String
+    let discardMessage: String
+
+    static let create = JournalEditorCopy(
+        navigationTitle: "Jurnal Baru",
+        writingTitle: "Apa yang ingin kamu simpan?",
+        placeholder: "Tulis pikiran, perasaan, atau kejadian yang ingin kamu ingat…",
+        privacyNote: "Jurnal ini hanya tersimpan di perangkatmu.",
+        discardTitle: "Buang jurnal baru?",
+        discardMessage: "Tulisan yang belum disimpan akan hilang."
+    )
+
+    static let edit = JournalEditorCopy(
+        navigationTitle: "Edit Jurnal",
+        writingTitle: "Perbarui ceritamu",
+        placeholder: "Tulis ulang bagian yang ingin kamu ubah…",
+        privacyNote: "Perubahan tetap tersimpan hanya di perangkatmu.",
+        discardTitle: "Buang perubahan?",
+        discardMessage: "Jurnal akan kembali ke versi terakhir yang disimpan."
+    )
 }

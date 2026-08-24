@@ -84,9 +84,7 @@ struct JournalsView: View {
                                 .alignmentGuide(.listRowSeparatorLeading) { _ in 68 }
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button("Hapus", systemImage: "trash", role: .destructive) {
-                                        withAnimation(.snappy(duration: 0.24)) {
-                                            journalPendingDeletion = journal
-                                        }
+                                        journalPendingDeletion = journal
                                     }
                                 }
                             }
@@ -109,16 +107,25 @@ struct JournalsView: View {
             }
 
             if let journal = journalPendingDeletion {
-                DeleteJournalAlert(
-                    journal: journal,
-                    hasInsight: hasCurrentInsight(for: journal),
-                    cancel: dismissDeleteAlert,
-                    delete: {
-                        dismissDeleteAlert()
+                MaiJurAlert(
+                    symbol: "trash.fill",
+                    tint: .red,
+                    title: "Hapus jurnal ini?",
+                    message: hasCurrentInsight(for: journal)
+                        ? "Jurnal dan insight yang terhubung akan ikut dihapus."
+                        : "Jurnal ini akan dihapus permanen dari perangkat.",
+                    primaryTitle: "Hapus",
+                    primaryRole: .destructive,
+                    primaryAction: {
+                        journalPendingDeletion = nil
                         store.deleteJournal(id: journal.id)
-                    }
+                    },
+                    secondaryTitle: "Batal",
+                    secondaryAction: {
+                        journalPendingDeletion = nil
+                    },
+                    journal: journal,
                 )
-                .transition(.opacity.combined(with: .scale(scale: 0.92)))
                 .zIndex(10)
             }
         }
@@ -135,111 +142,6 @@ struct JournalsView: View {
         .sheet(item: $editorRoute) { route in
             JournalEditorView(store: store, entry: route.entry)
         }
-    }
-
-    private func dismissDeleteAlert() {
-        withAnimation(.snappy(duration: 0.20)) {
-            journalPendingDeletion = nil
-        }
-    }
-}
-
-private struct DeleteJournalAlert: View {
-    let journal: JournalEntry
-    let hasInsight: Bool
-    let cancel: () -> Void
-    let delete: () -> Void
-
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.28)
-                .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                VStack(spacing: 16) {
-                    Image(systemName: "trash.fill")
-                        .font(.system(size: 23, weight: .semibold))
-                        .foregroundStyle(.red)
-                        .frame(width: 58, height: 58)
-                        .background(Color.red.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-
-                    VStack(spacing: 6) {
-                        Text("Hapus jurnal ini?")
-                            .font(.title3.weight(.bold))
-
-                        Text(hasInsight
-                             ? "Jurnal dan insight yang terhubung akan ikut dihapus."
-                             : "Jurnal ini akan dihapus permanen dari perangkat.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-
-                    HStack(spacing: 12) {
-                        VStack(spacing: 0) {
-                            Text(journal.date, format: .dateTime.day())
-                                .font(.title3.weight(.bold))
-                                .monospacedDigit()
-                            Text(journal.date.formatted(
-                                .dateTime
-                                    .month(.abbreviated)
-                                    .locale(Locale(identifier: "id_ID"))
-                            ))
-                                .font(.caption2.weight(.bold))
-                                .textCase(.uppercase)
-                                .foregroundStyle(.indigo)
-                        }
-                        .frame(width: 42)
-
-                        Capsule()
-                            .fill(Color.indigo.opacity(0.22))
-                            .frame(width: 2, height: 46)
-
-                        Text(journal.text)
-                            .font(.subheadline)
-                            .lineLimit(2)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .padding(14)
-                    .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-                .padding(22)
-
-                Divider()
-
-                HStack(spacing: 0) {
-                    Button("Batalkan", action: cancel)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.indigo)
-                        .frame(maxWidth: .infinity, minHeight: 52)
-                        .accessibilityIdentifier("cancel-delete-journal-button")
-
-                    Divider()
-                        .frame(height: 52)
-
-                    Button(role: .destructive) {
-                        delete()
-                    } label: {
-                        Text("Hapus")
-                            .fontWeight(.bold)
-                            .frame(maxWidth: .infinity, minHeight: 52)
-                    }
-                    .foregroundStyle(.red)
-                    .accessibilityIdentifier("confirm-delete-journal-button")
-                }
-            }
-            .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .stroke(.white.opacity(0.55), lineWidth: 0.5)
-            }
-            .shadow(color: .black.opacity(0.20), radius: 30, y: 16)
-            .padding(.horizontal, 30)
-            .frame(maxWidth: 430)
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityAddTraits(.isModal)
     }
 }
 

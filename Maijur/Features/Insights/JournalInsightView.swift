@@ -55,15 +55,20 @@ struct JournalInsightView: View {
                 .accessibilityIdentifier("create-insights-button")
             }
         }
-        .alert("Insight Tidak Tersedia", isPresented: Binding(
-            get: { generationError != nil },
-            set: { if !$0 { generationError = nil } }
-        )) {
-            Button("Mengerti", role: .cancel) {
-                generationError = nil
+        .overlay {
+            if let generationError {
+                MaiJurAlert(
+                    symbol: "sparkles",
+                    tint: .indigo,
+                    title: "Insight belum dapat dibuat",
+                    message: generationError,
+                    primaryTitle: "Tutup",
+                    primaryRole: nil,
+                    primaryAction: {
+                        self.generationError = nil
+                    }
+                )
             }
-        } message: {
-            Text(generationError ?? "Silakan coba lagi.")
         }
     }
 
@@ -83,7 +88,7 @@ struct JournalInsightView: View {
                 modelVersion: "Apple on-device"
             )
         } catch {
-            generationError = error.localizedDescription
+            generationError = InsightAlertCopy.message(for: error)
         }
     }
 }

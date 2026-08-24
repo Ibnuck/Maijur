@@ -26,6 +26,7 @@ final class MaijurUITests: XCTestCase {
         app.buttons["new-journal-button"].tap()
         let editor = app.textViews["journal-text-editor"]
         XCTAssertTrue(editor.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Apa yang ingin kamu simpan?"].exists)
         editor.tap()
         editor.typeText("A quiet walk gave me space to think.")
         app.buttons["save-journal-button"].tap()
@@ -59,10 +60,18 @@ final class MaijurUITests: XCTestCase {
         let saveButton = app.buttons["save-journal-button"]
         XCTAssertTrue(saveButton.waitForExistence(timeout: 3))
         XCTAssertFalse(saveButton.isEnabled)
+        XCTAssertTrue(app.staticTexts["Perbarui ceritamu"].exists)
 
         let editedText = app.textViews["journal-text-editor"]
         editedText.tap()
         editedText.typeText(" More context.")
         XCTAssertTrue(saveButton.isEnabled)
+
+        app.buttons["Batal"].tap()
+        XCTAssertTrue(app.staticTexts["Buang perubahan?"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Jurnal akan kembali ke versi terakhir yang disimpan."].exists)
+        XCTAssertTrue(app.buttons["Lanjut Menulis"].exists)
+        app.buttons["Lanjut Menulis"].tap()
+        XCTAssertTrue(editedText.exists)
     }
 }

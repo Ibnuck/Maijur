@@ -11,21 +11,23 @@ struct ContentView: View {
     let store: JournalStore
 
     var body: some View {
-        NavigationStack {
-            JournalsView(store: store)
-        }
-        .alert(
-            "Jurnal Tidak Dapat Disimpan",
-            isPresented: Binding(
-                get: { store.persistenceError != nil },
-                set: { if !$0 { store.clearPersistenceError() } }
-            )
-        ) {
-            Button("Mengerti", role: .cancel) {
-                store.clearPersistenceError()
+        ZStack {
+            NavigationStack {
+                JournalsView(store: store)
             }
-        } message: {
-            Text(store.persistenceError ?? "Silakan coba lagi.")
+
+            if let persistenceError = store.persistenceError {
+                MaiJurAlert(
+                    symbol: "externaldrive.badge.exclamationmark",
+                    tint: .orange,
+                    title: "Perubahan belum tersimpan",
+                    message: persistenceError,
+                    primaryTitle: "Tutup",
+                    primaryRole: nil,
+                    primaryAction: store.clearPersistenceError
+                )
+                .zIndex(20)
+            }
         }
     }
 }
