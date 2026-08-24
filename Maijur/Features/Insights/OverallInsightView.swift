@@ -48,6 +48,7 @@ struct OverallInsightView: View {
                 .frame(maxWidth: .infinity)
             }
         }
+        .accessibilityHidden(generationError != nil)
         .navigationTitle("Insight Keseluruhan")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
@@ -128,6 +129,7 @@ private struct OverallInsightHero: View {
                 .frame(width: 72, height: 72)
                 .background(Color.indigo.gradient, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .shadow(color: Color.indigo.opacity(0.18), radius: 16, y: 7)
+                .accessibilityHidden(true)
 
             VStack(spacing: 6) {
                 Text(hasResult ? "Cerita besarmu" : "Lihat perjalananmu lebih utuh")
@@ -199,6 +201,9 @@ private struct OverallInsightLoadingView: View {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(Color.primary.opacity(0.06), lineWidth: 1)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Menghubungkan perjalananmu")
+        .accessibilityValue("Insight baru sedang dipadukan dengan gambaran yang sudah tersimpan.")
     }
 }
 

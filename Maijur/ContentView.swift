@@ -15,6 +15,7 @@ struct ContentView: View {
             NavigationStack {
                 JournalsView(store: store)
             }
+            .accessibilityHidden(store.persistenceError != nil)
 
             if let persistenceError = store.persistenceError {
                 MaiJurAlert(

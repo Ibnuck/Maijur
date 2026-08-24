@@ -11,59 +11,48 @@ struct MaiJurAlert: View {
     var secondaryTitle: String?
     var secondaryAction: (() -> Void)?
     var journal: JournalEntry?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @AccessibilityFocusState private var isTitleFocused: Bool
 
     var body: some View {
         ZStack {
             Color.black.opacity(0.28)
                 .ignoresSafeArea()
+                .accessibilityHidden(true)
 
             VStack(spacing: 0) {
-                VStack(spacing: 16) {
-                    Image(systemName: symbol)
-                        .font(.system(size: 23, weight: .semibold))
-                        .foregroundStyle(tint)
-                        .frame(width: 58, height: 58)
-                        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                ScrollView {
+                    VStack(spacing: 16) {
+                        Image(systemName: symbol)
+                            .font(.system(size: 23, weight: .semibold))
+                            .foregroundStyle(tint)
+                            .frame(width: 58, height: 58)
+                            .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .accessibilityHidden(true)
 
-                    VStack(spacing: 6) {
-                        Text(title)
-                            .font(.title3.weight(.bold))
-                            .multilineTextAlignment(.center)
+                        VStack(spacing: 6) {
+                            Text(title)
+                                .font(.title3.weight(.bold))
+                                .multilineTextAlignment(.center)
+                                .accessibilityAddTraits(.isHeader)
+                                .accessibilityFocused($isTitleFocused)
 
-                        Text(message)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
+                            Text(message)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        if let journal {
+                            JournalAlertPreview(journal: journal)
+                        }
                     }
-
-                    if let journal {
-                        JournalAlertPreview(journal: journal)
-                    }
+                    .padding(22)
                 }
-                .padding(22)
 
                 Divider()
 
-                HStack(spacing: 0) {
-                    if let secondaryTitle, let secondaryAction {
-                        alertButton(
-                            title: secondaryTitle,
-                            color: .indigo,
-                            role: .cancel,
-                            action: secondaryAction
-                        )
-
-                        Divider()
-                            .frame(height: 52)
-                    }
-
-                    alertButton(
-                        title: primaryTitle,
-                        color: primaryRole == .destructive ? .red : .indigo,
-                        role: primaryRole,
-                        action: primaryAction
-                    )
-                }
+                alertActions
             }
             .background(Color(.secondarySystemGroupedBackground))
             .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
@@ -73,13 +62,69 @@ struct MaiJurAlert: View {
             }
             .shadow(color: .black.opacity(0.20), radius: 30, y: 16)
             .padding(.horizontal, 30)
-            .frame(maxWidth: 430)
+            .padding(.vertical, 24)
+            .frame(maxWidth: 430, maxHeight: 700)
         }
         .transaction { transaction in
             transaction.animation = nil
         }
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isModal)
+        .accessibilityAction(.escape) {
+            if let secondaryAction {
+                secondaryAction()
+            } else {
+                primaryAction()
+            }
+        }
+        .onAppear {
+            isTitleFocused = true
+        }
+    }
+
+    @ViewBuilder
+    private var alertActions: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(spacing: 0) {
+                if let secondaryTitle, let secondaryAction {
+                    alertButton(
+                        title: secondaryTitle,
+                        color: .indigo,
+                        role: .cancel,
+                        action: secondaryAction
+                    )
+                    Divider()
+                }
+
+                alertButton(
+                    title: primaryTitle,
+                    color: primaryRole == .destructive ? .red : .indigo,
+                    role: primaryRole,
+                    action: primaryAction
+                )
+            }
+        } else {
+            HStack(spacing: 0) {
+                if let secondaryTitle, let secondaryAction {
+                    alertButton(
+                        title: secondaryTitle,
+                        color: .indigo,
+                        role: .cancel,
+                        action: secondaryAction
+                    )
+
+                    Divider()
+                        .frame(height: 52)
+                }
+
+                alertButton(
+                    title: primaryTitle,
+                    color: primaryRole == .destructive ? .red : .indigo,
+                    role: primaryRole,
+                    action: primaryAction
+                )
+            }
+        }
     }
 
     private func alertButton(
@@ -92,42 +137,72 @@ struct MaiJurAlert: View {
             Text(title)
                 .fontWeight(role == .destructive ? .bold : .semibold)
                 .foregroundStyle(color)
+                .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity, minHeight: 52)
+                .padding(.horizontal, 8)
         }
     }
 }
 
 private struct JournalAlertPreview: View {
     let journal: JournalEntry
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(spacing: 0) {
-                Text(journal.date, format: .dateTime.day())
-                    .font(.title3.weight(.bold))
-                    .monospacedDigit()
-                Text(journal.date.formatted(
-                    .dateTime
-                        .month(.abbreviated)
-                        .locale(Locale(identifier: "id_ID"))
-                ))
-                    .font(.caption2.weight(.bold))
-                    .textCase(.uppercase)
-                    .foregroundStyle(.indigo)
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(formattedDate)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.indigo)
+                    previewText
+                }
+            } else {
+                HStack(spacing: 12) {
+                    VStack(spacing: 0) {
+                        Text(journal.date, format: .dateTime.day())
+                            .font(.title3.weight(.bold))
+                            .monospacedDigit()
+                        Text(journal.date.formatted(
+                            .dateTime
+                                .month(.abbreviated)
+                                .locale(Locale(identifier: "id_ID"))
+                        ))
+                            .font(.caption2.weight(.bold))
+                            .textCase(.uppercase)
+                            .foregroundStyle(.indigo)
+                    }
+                    .frame(width: 42)
+
+                    Capsule()
+                        .fill(Color.indigo.opacity(0.22))
+                        .frame(width: 2, height: 46)
+
+                    previewText
+                }
             }
-            .frame(width: 42)
-
-            Capsule()
-                .fill(Color.indigo.opacity(0.22))
-                .frame(width: 2, height: 46)
-
-            Text(journal.text)
-                .font(.subheadline)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(14)
         .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(formattedDate). \(journal.text)")
+    }
+
+    private var previewText: some View {
+        Text(journal.text)
+            .font(.subheadline)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var formattedDate: String {
+        journal.date.formatted(
+            .dateTime
+                .day()
+                .month(.wide)
+                .year()
+                .locale(Locale(identifier: "id_ID"))
+        )
     }
 }
 

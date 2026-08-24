@@ -15,7 +15,8 @@ struct MaijurApp: App {
 
     init() {
         do {
-            let isUITesting = ProcessInfo.processInfo.arguments.contains("-ui-testing")
+            let arguments = ProcessInfo.processInfo.arguments
+            let isUITesting = arguments.contains("-ui-testing")
             let configuration = ModelConfiguration(isStoredInMemoryOnly: isUITesting)
             let container = try ModelContainer(
                 for: StoredJournal.self,
@@ -24,7 +25,9 @@ struct MaijurApp: App {
                 configurations: configuration
             )
             modelContainer = container
-            _store = State(initialValue: JournalStore(modelContext: container.mainContext))
+            _store = State(initialValue: arguments.contains("-ui-testing-long-list")
+                ? MockData.longListStore()
+                : JournalStore(modelContext: container.mainContext))
         } catch {
             modelContainer = nil
             _store = State(initialValue: JournalStore.unavailable(message: "MaiJur tidak dapat membuka penyimpanan lokal. Tutup lalu buka kembali aplikasi dan coba lagi."))

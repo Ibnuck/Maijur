@@ -6,6 +6,10 @@ struct JournalsView: View {
     @State private var editorRoute: EditorRoute?
     @State private var journalPendingDeletion: JournalEntry?
 
+    private var currentInsightJournalIDs: Set<UUID> {
+        Set(store.currentJournalInsights.map(\.sourceJournalID))
+    }
+
     private var monthlySections: [JournalMonthSection] {
         let calendar = Calendar.current
         let grouped = Dictionary(grouping: store.journals) { journal in
@@ -23,88 +27,89 @@ struct JournalsView: View {
     }
 
     private func hasCurrentInsight(for journal: JournalEntry) -> Bool {
-        store.history.contains {
-            $0.belongsToCurrentRevision(of: journal)
-                && $0.isCompatible(with: JournalAnalysisService.promptVersion)
-        }
+        currentInsightJournalIDs.contains(journal.id)
     }
 
     var body: some View {
         ZStack {
             Color(.systemGroupedBackground)
                 .ignoresSafeArea()
+                .accessibilityHidden(true)
 
-            switch store.journalsPhase {
-            case .loading:
-                JournalsLoadingState()
-            case .loaded where store.journals.isEmpty:
-                JournalsEmptyState {
-                    editorRoute = .create
-                }
-            case .loaded:
-                List {
-                    Section {
-                        NavigationLink {
-                            OverallInsightView(store: store)
-                        } label: {
-                            OverallInsightRow(store: store)
-                        }
-                        .tint(.white)
-                        .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 18, trailing: 16))
-                        .listRowBackground(
-                            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [.indigo, .purple],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .padding(.vertical, 4)
-                        )
-                        .listRowSeparator(.hidden)
-                        .accessibilityIdentifier("overall-insight-link")
+            Group {
+                switch store.journalsPhase {
+                case .loading:
+                    JournalsLoadingState()
+                case .loaded where store.journals.isEmpty:
+                    JournalsEmptyState {
+                        editorRoute = .create
                     }
-
-                    ForEach(monthlySections) { section in
+                case .loaded:
+                    List {
                         Section {
-                            ForEach(section.journals) { journal in
-                                NavigationLink {
-                                    JournalDetailView(journal: journal, store: store) {
-                                        editorRoute = .edit(journal)
-                                    }
-                                } label: {
-                                    JournalRow(
-                                        journal: journal,
-                                        hasInsight: hasCurrentInsight(for: journal)
-                                    )
-                                }
-                                .listRowInsets(EdgeInsets(top: 12, leading: 18, bottom: 12, trailing: 16))
-                                .listRowBackground(Color(.secondarySystemGroupedBackground))
-                                .alignmentGuide(.listRowSeparatorLeading) { _ in 68 }
-                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button("Hapus", systemImage: "trash", role: .destructive) {
-                                        journalPendingDeletion = journal
-                                    }
-                                }
+                            NavigationLink {
+                                OverallInsightView(store: store)
+                            } label: {
+                                OverallInsightRow(store: store)
                             }
-                        } header: {
-                            Text(section.month.formatted(
-                                .dateTime
-                                    .month(.wide)
-                                    .year()
-                                    .locale(Locale(identifier: "id_ID"))
-                            ))
-                            .font(.headline)
-                            .textCase(nil)
-                            .foregroundStyle(.primary)
+                            .tint(.white)
+                            .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 18, trailing: 16))
+                            .listRowBackground(
+                                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [.indigo, .purple],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .padding(.vertical, 4)
+                            )
+                            .listRowSeparator(.hidden)
+                            .accessibilityIdentifier("overall-insight-link")
+                        }
+
+                        ForEach(monthlySections) { section in
+                            Section {
+                                ForEach(section.journals) { journal in
+                                    NavigationLink {
+                                        JournalDetailView(journal: journal, store: store) {
+                                            editorRoute = .edit(journal)
+                                        }
+                                    } label: {
+                                        JournalRow(
+                                            journal: journal,
+                                            hasInsight: hasCurrentInsight(for: journal)
+                                        )
+                                    }
+                                    .listRowInsets(EdgeInsets(top: 12, leading: 18, bottom: 12, trailing: 16))
+                                    .listRowBackground(Color(.secondarySystemGroupedBackground))
+                                    .alignmentGuide(.listRowSeparatorLeading) { _ in 68 }
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                        Button("Hapus", systemImage: "trash", role: .destructive) {
+                                            journalPendingDeletion = journal
+                                        }
+                                    }
+                                }
+                            } header: {
+                                Text(section.month.formatted(
+                                    .dateTime
+                                        .month(.wide)
+                                        .year()
+                                        .locale(Locale(identifier: "id_ID"))
+                                ))
+                                .font(.headline)
+                                .textCase(nil)
+                                .foregroundStyle(.primary)
+                            }
                         }
                     }
+                    .listStyle(.insetGrouped)
+                    .scrollContentBackground(.hidden)
+                    .accessibilityIdentifier("journals-root-populated")
                 }
-                .listStyle(.insetGrouped)
-                .scrollContentBackground(.hidden)
-                .accessibilityIdentifier("journals-root-populated")
             }
+            .accessibilityHidden(journalPendingDeletion != nil)
 
             if let journal = journalPendingDeletion {
                 MaiJurAlert(
@@ -174,48 +179,85 @@ private struct OverallInsightRow: View {
             .foregroundStyle(.white)
         }
         .padding(.vertical, 12)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Insight Keseluruhan")
+        .accessibilityValue(subtitle)
     }
 }
 
 private struct JournalRow: View {
     let journal: JournalEntry
     let hasInsight: Bool
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(spacing: 2) {
-                Text(journal.date, format: .dateTime.day())
-                    .font(.title2.weight(.bold))
-                    .monospacedDigit()
-                Text(journal.date.formatted(
-                    .dateTime
-                        .weekday(.abbreviated)
-                        .locale(Locale(identifier: "id_ID"))
-                ))
-                    .font(.caption2.weight(.bold))
-                    .textCase(.uppercase)
-                    .foregroundStyle(.indigo)
-            }
-            .frame(width: 42)
-
-            Capsule()
-                .fill(Color.indigo.opacity(0.22))
-                .frame(width: 2, height: 58)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(journal.text)
-                    .font(.body)
-                    .foregroundStyle(.primary)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
-
-                if hasInsight {
-                    Label("Insight tersedia", systemImage: "sparkles")
-                        .font(.caption.weight(.medium))
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(accessibleDate)
+                        .font(.headline)
                         .foregroundStyle(.indigo)
+                    journalContent
+                }
+            } else {
+                HStack(alignment: .center, spacing: 12) {
+                    compactDate
+
+                    Capsule()
+                        .fill(Color.indigo.opacity(0.22))
+                        .frame(width: 2, height: 58)
+
+                    journalContent
                 }
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(accessibleDate). \(journal.text)")
+        .accessibilityValue(hasInsight ? "Insight tersedia" : "Belum ada insight")
+    }
+
+    private var compactDate: some View {
+        VStack(spacing: 2) {
+            Text(journal.date, format: .dateTime.day())
+                .font(.title2.weight(.bold))
+                .monospacedDigit()
+            Text(journal.date.formatted(
+                .dateTime
+                    .weekday(.abbreviated)
+                    .locale(Locale(identifier: "id_ID"))
+            ))
+                .font(.caption2.weight(.bold))
+                .textCase(.uppercase)
+                .foregroundStyle(.indigo)
+        }
+        .frame(width: 42)
+    }
+
+    private var journalContent: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(journal.text)
+                .font(.body)
+                .foregroundStyle(.primary)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 5 : 3)
+                .multilineTextAlignment(.leading)
+
+            if hasInsight {
+                Label("Insight tersedia", systemImage: "sparkles")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.indigo)
+            }
+        }
+    }
+
+    private var accessibleDate: String {
+        journal.date.formatted(
+            .dateTime
+                .weekday(.wide)
+                .day()
+                .month(.wide)
+                .year()
+                .locale(Locale(identifier: "id_ID"))
+        )
     }
 }
 
@@ -244,6 +286,7 @@ private struct JournalsEmptyState: View {
                 .frame(width: 76, height: 76)
                 .background(Color.indigo.gradient, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .shadow(color: Color.indigo.opacity(0.18), radius: 18, y: 8)
+                .accessibilityLabel("Ilustrasi jurnal")
 
             VStack(spacing: 8) {
                 Text("Mulai halaman pertamamu")
@@ -263,7 +306,6 @@ private struct JournalsEmptyState: View {
         }
         .padding(28)
         .frame(maxWidth: 440)
-        .accessibilityIdentifier("journals-root-empty")
     }
 }
 

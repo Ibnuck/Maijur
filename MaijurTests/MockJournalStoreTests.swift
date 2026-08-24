@@ -201,6 +201,70 @@ struct JournalStoreTests {
         #expect(store.pendingOverallInsights.isEmpty)
     }
 
+    @Test("Editing a journal invalidates its insight and any overall synthesis that covered it")
+    func editingJournalInvalidatesDerivedInsight() throws {
+        let entry = journal(id: 1, timestamp: 1_700_000_000, text: "Before")
+        let insight = HistorySnapshot(
+            id: UUID(),
+            sourceJournalID: entry.id,
+            sourceJournalDate: entry.date,
+            createdAt: entry.date,
+            summary: "Summary",
+            reflection: "Reflection",
+            digest: "Theme",
+            sourceContentHash: entry.contentHash,
+            promptVersion: JournalAnalysisService.promptVersion
+        )
+        let store = JournalStore(
+            journals: [entry],
+            history: [insight],
+            overallInsight: OverallInsightSnapshot(
+                id: UUID(),
+                createdAt: entry.date,
+                updatedAt: entry.date,
+                overview: "Overview",
+                patterns: "Patterns",
+                recentFocus: "Recent",
+                coveredInsightIDs: [insight.id]
+            )
+        )
+
+        let updated = store.updateJournal(id: entry.id, date: entry.date, text: "After")
+
+        #expect(updated != nil)
+        #expect(store.history.isEmpty)
+        #expect(store.overallInsight == nil)
+    }
+
+    @Test("Current insight lookup stays correct for a long journal collection")
+    func currentInsightsForLongCollection() {
+        let baseDate = Date(timeIntervalSince1970: 1_700_000_000)
+        let journals = (0..<1_000).map { index in
+            JournalEntry(
+                id: UUID(),
+                date: baseDate.addingTimeInterval(TimeInterval(index)),
+                text: "Journal \(index)"
+            )
+        }
+        let history = journals.map { entry in
+            HistorySnapshot(
+                id: UUID(),
+                sourceJournalID: entry.id,
+                sourceJournalDate: entry.date,
+                createdAt: entry.date,
+                summary: "Summary",
+                reflection: "Reflection",
+                digest: "Theme",
+                sourceContentHash: entry.contentHash,
+                promptVersion: JournalAnalysisService.promptVersion
+            )
+        }
+        let store = JournalStore(journals: journals, history: history)
+
+        #expect(store.currentJournalInsights.count == 1_000)
+        #expect(store.currentJournalInsights.map(\.sourceJournalDate) == journals.map(\.date).sorted())
+    }
+
     private func journal(id: UInt8, timestamp: TimeInterval, text: String) -> JournalEntry {
         JournalEntry(
             id: UUID(uuid: (id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),

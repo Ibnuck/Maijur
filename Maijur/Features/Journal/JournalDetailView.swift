@@ -72,13 +72,34 @@ private struct JournalDetailBackground: View {
                 .offset(x: 100, y: -140)
         }
         .ignoresSafeArea()
+        .accessibilityHidden(true)
     }
 }
 
 private struct JournalDetailDateHeader: View {
     let date: Date
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(date, format: .dateTime.weekday(.wide))
+                        .font(.title3.weight(.semibold))
+                    Text(date, format: .dateTime.day().month(.wide).year())
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                compactHeader
+            }
+        }
+        .padding(.horizontal, 4)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(date.formatted(date: .complete, time: .omitted))
+    }
+
+    private var compactHeader: some View {
         HStack(spacing: 14) {
             VStack(spacing: 1) {
                 Text(date, format: .dateTime.day())
@@ -101,9 +122,6 @@ private struct JournalDetailDateHeader: View {
 
             Spacer()
         }
-        .padding(.horizontal, 4)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(date.formatted(date: .complete, time: .omitted))
     }
 }
 
@@ -168,5 +186,9 @@ private struct JournalInsightCallout: View {
                 .stroke(Color.indigo.opacity(0.12), lineWidth: 1)
         }
         .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(hasInsight ? "Buka Insight" : "Temukan Insight")
+        .accessibilityValue(hasInsight ? "Insight jurnal ini sudah tersedia." : "Insight jurnal ini belum dibuat.")
+        .accessibilityHint("Membuka halaman insight jurnal.")
     }
 }

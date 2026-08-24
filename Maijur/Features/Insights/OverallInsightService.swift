@@ -1,5 +1,6 @@
 import Foundation
 import FoundationModels
+import OSLog
 
 enum OverallInsightPlanner {
     static let maximumInsightsPerSession = 3
@@ -15,6 +16,10 @@ enum OverallInsightPlanner {
 @available(iOS 26.0, *)
 struct OverallInsightService {
     static let promptVersion = "overall-insight-v5"
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "MaiJur",
+        category: "FoundationModels"
+    )
 
     func generate(
         previous: OverallInsightSnapshot?,
@@ -22,6 +27,12 @@ struct OverallInsightService {
     ) async throws -> OverallInsightGeneration {
         guard SystemLanguageModel.default.isAvailable else {
             throw JournalAnalysisError.modelUnavailable
+        }
+
+        let startedAt = Date()
+        defer {
+            let duration = String(format: "%.2f", Date().timeIntervalSince(startedAt))
+            Self.logger.info("Overall insight request ended after \(duration, privacy: .public) seconds")
         }
 
         let batches = OverallInsightPlanner.batches(from: newInsights)

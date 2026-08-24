@@ -73,6 +73,7 @@ struct JournalEditorView: View {
                     .frame(maxWidth: 700)
                     .frame(maxWidth: .infinity)
                 }
+                .scrollDismissesKeyboard(.interactively)
             }
             .navigationTitle(copy.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
@@ -101,6 +102,8 @@ struct JournalEditorView: View {
                 }
             }
         }
+        .accessibilityHidden(showsDiscardConfirmation)
+        .interactiveDismissDisabled()
         .overlay {
             if showsDiscardConfirmation {
                 MaiJurAlert(
@@ -156,34 +159,53 @@ private struct JournalEditorBackground: View {
                 .offset(x: 100, y: -140)
         }
         .ignoresSafeArea()
+        .accessibilityHidden(true)
     }
 }
 
 private struct JournalDateRow: View {
     @Binding var date: Date
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        HStack(spacing: 12) {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 10) {
+                    dateLabel
+                    datePicker
+                }
+            } else {
+                HStack(spacing: 12) {
+                    dateLabel
+                    Spacer(minLength: 8)
+                    datePicker
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private var dateLabel: some View {
+        Label {
+            Text("Tanggal jurnal")
+                .font(.subheadline.weight(.semibold))
+        } icon: {
             Image(systemName: "calendar")
                 .font(.body.weight(.semibold))
                 .foregroundStyle(.indigo)
                 .frame(width: 38, height: 38)
                 .background(Color.indigo.opacity(0.10), in: Circle())
-
-            Text("Tanggal jurnal")
-                .font(.subheadline.weight(.semibold))
-
-            Spacer(minLength: 8)
-
-            DatePicker("Tanggal jurnal", selection: $date, displayedComponents: .date)
-                .labelsHidden()
-                .datePickerStyle(.compact)
-                .accessibilityLabel("Tanggal jurnal")
-                .accessibilityIdentifier("journal-date-picker")
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private var datePicker: some View {
+        DatePicker("Tanggal jurnal", selection: $date, displayedComponents: .date)
+            .labelsHidden()
+            .datePickerStyle(.compact)
+            .accessibilityLabel("Tanggal jurnal")
+            .accessibilityIdentifier("journal-date-picker")
     }
 }
 
@@ -195,6 +217,8 @@ private struct JournalWritingSurface: View {
     let title: String
     let placeholder: String
     var isFocused: FocusState<Bool>.Binding
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var meterColor: Color {
         if progress >= 1 { return .red }
@@ -238,17 +262,18 @@ private struct JournalWritingSurface: View {
 
             Divider()
 
-            HStack(spacing: 12) {
-                ProgressView(value: progress)
-                    .tint(meterColor)
-                    .frame(maxWidth: .infinity)
-                    .animation(.easeOut(duration: 0.2), value: progress)
-
-                Text("\(characterCount.formatted()) karakter")
-                    .monospacedDigit()
-                Text("•")
-                    .foregroundStyle(.tertiary)
-                Text(meterMessage)
+            Group {
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: 8) {
+                        characterProgress
+                        characterSummary
+                    }
+                } else {
+                    HStack(spacing: 12) {
+                        characterProgress
+                        characterSummary
+                    }
+                }
             }
             .font(.caption.weight(.medium))
             .foregroundStyle(meterColor)
@@ -264,6 +289,24 @@ private struct JournalWritingSurface: View {
                 .stroke(Color.primary.opacity(0.06), lineWidth: 1)
         }
         .shadow(color: Color.black.opacity(0.03), radius: 12, y: 5)
+    }
+
+    private var characterProgress: some View {
+        ProgressView(value: progress)
+            .tint(meterColor)
+            .frame(maxWidth: .infinity)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: progress)
+    }
+
+    private var characterSummary: some View {
+        HStack(spacing: 6) {
+            Text("\(characterCount.formatted()) karakter")
+                .monospacedDigit()
+            Text("•")
+                .foregroundStyle(.tertiary)
+            Text(meterMessage)
+        }
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 

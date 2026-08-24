@@ -6,8 +6,8 @@ MaiJur will use SwiftUI and Apple-native frameworks as the default stack. The
 initial architecture remains intentionally small:
 
 - SwiftUI for presentation and navigation;
-- SwiftData for local journal and History persistence;
-- Foundation Models for optional on-device summary, reflection, and digest;
+- SwiftData for local journal and insight persistence;
+- Foundation Models for optional on-device per-journal and overall insights;
 - Swift concurrency for asynchronous work;
 - native Apple accessibility and system UI conventions.
 

@@ -44,6 +44,18 @@ enum MockData {
         )
     }
 
+    static func longListStore(count: Int = 500) -> JournalStore {
+        let anchor = Date(timeIntervalSince1970: 1_787_428_800)
+        let entries = (0..<count).map { index in
+            JournalEntry(
+                id: UUID(),
+                date: anchor.addingTimeInterval(-TimeInterval(index * 86_400)),
+                text: "Catatan performa nomor \(index + 1). Hari ini menyimpan satu hal kecil yang ingin diingat."
+            )
+        }
+        return JournalStore(journals: entries)
+    }
+
     private static let journals = [
         JournalEntry(
             id: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!,
