@@ -119,21 +119,108 @@ struct JournalsView: View {
         .sheet(item: $editorRoute) { route in
             JournalEditorView(store: store, entry: route.entry)
         }
-        .confirmationDialog(
-            "Hapus jurnal ini?",
-            isPresented: Binding(
-                get: { journalPendingDeletion != nil },
-                set: { if !$0 { journalPendingDeletion = nil } }
-            ),
-            presenting: journalPendingDeletion
-        ) { journal in
-            Button("Hapus Jurnal", role: .destructive) {
-                store.deleteJournal(id: journal.id)
-                journalPendingDeletion = nil
-            }
-        } message: { _ in
-            Text("Jurnal ini akan dihapus dari perangkat ini.")
+        .sheet(item: $journalPendingDeletion) { journal in
+            DeleteJournalSheet(
+                journal: journal,
+                hasInsight: hasCurrentInsight(for: journal),
+                cancel: {
+                    journalPendingDeletion = nil
+                },
+                delete: {
+                    journalPendingDeletion = nil
+                    store.deleteJournal(id: journal.id)
+                }
+            )
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(30)
         }
+    }
+}
+
+private struct DeleteJournalSheet: View {
+    let journal: JournalEntry
+    let hasInsight: Bool
+    let cancel: () -> Void
+    let delete: () -> Void
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "trash.fill")
+                .font(.system(size: 25, weight: .semibold))
+                .foregroundStyle(.red)
+                .frame(width: 64, height: 64)
+                .background(Color.red.opacity(0.11), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+
+            VStack(spacing: 7) {
+                Text("Hapus jurnal ini?")
+                    .font(.title2.weight(.bold))
+
+                Text(hasInsight
+                     ? "Jurnal dan insight terkait akan dihapus permanen dari perangkat ini."
+                     : "Jurnal ini akan dihapus permanen dari perangkat ini.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            HStack(alignment: .top, spacing: 14) {
+                VStack(spacing: 1) {
+                    Text(journal.date, format: .dateTime.day())
+                        .font(.title3.weight(.bold))
+                        .monospacedDigit()
+                    Text(journal.date.formatted(
+                        .dateTime
+                            .month(.abbreviated)
+                            .locale(Locale(identifier: "id_ID"))
+                    ))
+                        .font(.caption2.weight(.bold))
+                        .textCase(.uppercase)
+                        .foregroundStyle(.indigo)
+                }
+                .frame(width: 44)
+
+                Rectangle()
+                    .fill(Color.indigo.opacity(0.20))
+                    .frame(width: 2, height: 60)
+
+                Text(journal.text)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+            VStack(spacing: 10) {
+                Button(role: .destructive) {
+                    delete()
+                } label: {
+                    Label("Hapus Jurnal", systemImage: "trash")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+                .controlSize(.large)
+                .accessibilityIdentifier("confirm-delete-journal-button")
+
+                Button(action: cancel) {
+                    Text("Batalkan")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .accessibilityIdentifier("cancel-delete-journal-button")
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+        .padding(.bottom, 24)
+        .frame(maxWidth: 560)
+        .frame(maxWidth: .infinity)
+        .background(Color(.systemGroupedBackground))
     }
 }
 
