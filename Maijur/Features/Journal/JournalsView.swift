@@ -81,6 +81,7 @@ struct JournalsView: View {
                                 }
                                 .listRowInsets(EdgeInsets(top: 12, leading: 18, bottom: 12, trailing: 16))
                                 .listRowBackground(Color(.secondarySystemGroupedBackground))
+                                .alignmentGuide(.listRowSeparatorLeading) { _ in 68 }
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button("Hapus", systemImage: "trash", role: .destructive) {
                                         journalPendingDeletion = journal

@@ -14,22 +14,28 @@ struct JournalInsightView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                InsightHero(date: journal.date, hasResult: snapshot != nil)
+        ZStack {
+            InsightPageBackground()
 
-                if isGenerating || store.insightLoadingJournalIDs.contains(journal.id) {
-                    InsightLoadingView()
-                } else if let snapshot {
-                    InsightResultCards(snapshot: snapshot)
-                } else {
-                    InsightIntroduction()
+            ScrollView {
+                VStack(spacing: 16) {
+                    InsightHero(date: journal.date, hasResult: snapshot != nil)
+
+                    if isGenerating || store.insightLoadingJournalIDs.contains(journal.id) {
+                        InsightLoadingView()
+                    } else if let snapshot {
+                        InsightResultCards(snapshot: snapshot)
+                    } else {
+                        InsightIntroduction()
+                    }
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
+                .frame(maxWidth: 700)
+                .frame(maxWidth: .infinity)
             }
-            .padding()
-            .frame(maxWidth: 700)
         }
-        .background(Color(.systemGroupedBackground))
         .navigationTitle("Insight")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
@@ -41,6 +47,7 @@ struct JournalInsightView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(.indigo)
                 .controlSize(.large)
                 .padding(.horizontal)
                 .padding(.vertical, 10)
@@ -88,18 +95,25 @@ private struct InsightHero: View {
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: hasResult ? "sparkles.rectangle.stack.fill" : "sparkles")
-                .font(.system(size: 38, weight: .medium))
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(.white, .yellow)
-                .frame(width: 76, height: 76)
-                .background(Color.accentColor.gradient, in: Circle())
+                .font(.system(size: 32, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 72, height: 72)
+                .background(Color.indigo.gradient, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .shadow(color: Color.indigo.opacity(0.18), radius: 16, y: 7)
 
             VStack(spacing: 6) {
                 Text(hasResult ? "Ruang refleksimu" : "Kenali ceritamu lebih dalam")
                     .font(.title2.weight(.bold))
                     .multilineTextAlignment(.center)
 
-                Text(date, format: .dateTime.weekday(.wide).month(.wide).day().year())
+                Text(date.formatted(
+                    .dateTime
+                        .weekday(.wide)
+                        .month(.wide)
+                        .day()
+                        .year()
+                        .locale(Locale(identifier: "id_ID"))
+                ))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -107,11 +121,12 @@ private struct InsightHero: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 26)
         .padding(.horizontal)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.accentColor.opacity(0.16), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
         }
+        .shadow(color: Color.black.opacity(0.03), radius: 12, y: 5)
     }
 }
 
@@ -144,7 +159,11 @@ private struct InsightIntroduction: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
-        .background(.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+        }
     }
 }
 
@@ -157,9 +176,9 @@ private struct InsightFeatureRow: View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
                 .font(.headline)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(.indigo)
                 .frame(width: 36, height: 36)
-                .background(Color.accentColor.opacity(0.12), in: Circle())
+                .background(Color.indigo.opacity(0.10), in: Circle())
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
@@ -189,7 +208,11 @@ private struct InsightLoadingView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 42)
         .padding(.horizontal, 24)
-        .background(.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+        }
         .accessibilityIdentifier("insight-loading-view")
     }
 }
@@ -204,53 +227,70 @@ struct InsightResultCards: View {
                 .foregroundStyle(.green)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            InsightResultCard(
+            InsightContentCard(
                 icon: "text.alignleft",
                 title: "Inti Cerita",
-                text: snapshot.summary,
-                color: .blue
+                text: snapshot.summary
             )
-            InsightResultCard(
+            InsightContentCard(
                 icon: "quote.bubble.fill",
                 title: "Ruang Refleksi",
-                text: snapshot.reflection,
-                color: .purple
+                text: snapshot.reflection
             )
-            InsightResultCard(
+            InsightContentCard(
                 icon: "point.3.connected.trianglepath.dotted",
                 title: "Tema Utama",
-                text: snapshot.digest,
-                color: .orange
+                text: snapshot.digest
             )
         }
     }
 }
 
-private struct InsightResultCard: View {
+struct InsightContentCard: View {
     let icon: String
     let title: String
     let text: String
-    let color: Color
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label(title, systemImage: icon)
-                .font(.headline)
-                .foregroundStyle(color)
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.indigo)
+                    .frame(width: 34, height: 34)
+                    .background(Color.indigo.opacity(0.10), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                Text(title)
+                    .font(.headline)
+            }
 
             Text(text)
                 .font(.body)
+                .lineSpacing(5)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(20)
-        .background(.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(alignment: .leading) {
-            Capsule()
-                .fill(color.gradient)
-                .frame(width: 4)
-                .padding(.vertical, 18)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
         }
+        .shadow(color: Color.black.opacity(0.03), radius: 12, y: 5)
+    }
+}
+
+struct InsightPageBackground: View {
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Color(.systemGroupedBackground)
+            Circle()
+                .fill(Color.indigo.opacity(0.08))
+                .frame(width: 260, height: 260)
+                .blur(radius: 50)
+                .offset(x: 100, y: -140)
+        }
+        .ignoresSafeArea()
     }
 }
 

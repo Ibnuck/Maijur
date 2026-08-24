@@ -23,6 +23,10 @@ struct JournalEditorView: View {
         }
     }
 
+    private var canSave: Bool {
+        draft.isValid && (entry == nil || hasChanges)
+    }
+
     private var limitedText: Binding<String> {
         Binding(
             get: { draft.text },
@@ -44,6 +48,7 @@ struct JournalEditorView: View {
                             characterCount: draft.characterCount,
                             remainingCount: draft.remainingCharacterCount,
                             progress: draft.characterLimitProgress,
+                            isEditing: entry != nil,
                             isFocused: $isWritingFocused
                         )
 
@@ -73,7 +78,7 @@ struct JournalEditorView: View {
                         save()
                     }
                     .fontWeight(.semibold)
-                    .disabled(!draft.isValid)
+                    .disabled(!canSave)
                     .accessibilityIdentifier("save-journal-button")
                 }
                 ToolbarItemGroup(placement: .keyboard) {
@@ -173,12 +178,13 @@ private struct JournalWritingSurface: View {
     let characterCount: Int
     let remainingCount: Int
     let progress: Double
+    let isEditing: Bool
     var isFocused: FocusState<Bool>.Binding
 
     private var meterColor: Color {
         if progress >= 1 { return .red }
         if progress >= 0.85 { return .orange }
-        return .blue
+        return .indigo
     }
 
     private var meterMessage: String {
@@ -189,19 +195,14 @@ private struct JournalWritingSurface: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text("Apa yang ingin kamu simpan hari ini?")
-                    .font(.title2.weight(.bold))
-                Text("Tidak perlu sempurna—cukup tulis apa yang sedang ada di pikiranmu.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
+            Text(isEditing ? "Perbarui jurnalmu" : "Apa yang ingin kamu ingat?")
+                .font(.title2.weight(.bold))
 
             Divider()
 
             ZStack(alignment: .topLeading) {
                 if text.isEmpty {
-                    Text("Mulai menulis…")
+                    Text(isEditing ? "Perbarui isi jurnal…" : "Mulai menulis ceritamu…")
                         .font(.body)
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 5)

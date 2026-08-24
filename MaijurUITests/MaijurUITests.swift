@@ -39,4 +39,30 @@ final class MaijurUITests: XCTestCase {
         XCTAssertTrue(app.buttons["create-insights-button"].waitForExistence(timeout: 3))
         XCTAssertFalse(app.descendants(matching: .any)["journal-detail-text"].exists)
     }
+
+    @MainActor
+    func testUnchangedEditKeepsSaveDisabled() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+
+        app.buttons["new-journal-button"].tap()
+        let editor = app.textViews["journal-text-editor"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 3))
+        editor.tap()
+        editor.typeText("A detail I may want to revisit.")
+        app.buttons["save-journal-button"].tap()
+
+        app.staticTexts["A detail I may want to revisit."].tap()
+        app.buttons["edit-journal-button"].tap()
+
+        let saveButton = app.buttons["save-journal-button"]
+        XCTAssertTrue(saveButton.waitForExistence(timeout: 3))
+        XCTAssertFalse(saveButton.isEnabled)
+
+        let editedText = app.textViews["journal-text-editor"]
+        editedText.tap()
+        editedText.typeText(" More context.")
+        XCTAssertTrue(saveButton.isEnabled)
+    }
 }

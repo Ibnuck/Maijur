@@ -10,38 +10,44 @@ struct OverallInsightView: View {
     private var pendingCount: Int { store.pendingOverallInsights.count }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                OverallInsightHero(hasResult: insight != nil)
+        ZStack {
+            InsightPageBackground()
 
-                if isGenerating {
-                    OverallInsightLoadingView()
-                } else if let insight {
-                    OverallInsightCards(insight: insight)
+            ScrollView {
+                VStack(spacing: 16) {
+                    OverallInsightHero(hasResult: insight != nil)
 
-                    if pendingCount == 0 {
-                        Label("Sudah mencakup semua insight jurnal terbaru", systemImage: "checkmark.circle.fill")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.green)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(18)
-                            .background(.background, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    if isGenerating {
+                        OverallInsightLoadingView()
+                    } else if let insight {
+                        OverallInsightCards(insight: insight)
+
+                        if pendingCount == 0 {
+                            Label("Sudah mencakup semua insight jurnal terbaru", systemImage: "checkmark.circle.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.green)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(18)
+                                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        }
+                    } else if store.currentJournalInsights.isEmpty {
+                        ContentUnavailableView {
+                            Label("Belum Ada Bahan Insight", systemImage: "sparkles.rectangle.stack")
+                        } description: {
+                            Text("Buat insight dari detail jurnal terlebih dahulu. Jurnal tanpa insight akan dilewati.")
+                        }
+                        .padding(.vertical, 30)
+                    } else {
+                        OverallInsightIntroduction(count: pendingCount)
                     }
-                } else if store.currentJournalInsights.isEmpty {
-                    ContentUnavailableView {
-                        Label("Belum Ada Bahan Insight", systemImage: "sparkles.rectangle.stack")
-                    } description: {
-                        Text("Buat insight dari detail jurnal terlebih dahulu. Jurnal tanpa insight akan dilewati.")
-                    }
-                    .padding(.vertical, 30)
-                } else {
-                    OverallInsightIntroduction(count: pendingCount)
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
+                .frame(maxWidth: 700)
+                .frame(maxWidth: .infinity)
             }
-            .padding()
-            .frame(maxWidth: 700)
         }
-        .background(Color(.systemGroupedBackground))
         .navigationTitle("Insight Keseluruhan")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
@@ -53,6 +59,7 @@ struct OverallInsightView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(.indigo)
                 .controlSize(.large)
                 .padding(.horizontal)
                 .padding(.vertical, 10)
@@ -107,11 +114,11 @@ private struct OverallInsightHero: View {
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "point.3.filled.connected.trianglepath.dotted")
-                .font(.system(size: 38, weight: .medium))
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(.white, .mint)
-                .frame(width: 76, height: 76)
-                .background(Color.indigo.gradient, in: Circle())
+                .font(.system(size: 32, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 72, height: 72)
+                .background(Color.indigo.gradient, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .shadow(color: Color.indigo.opacity(0.18), radius: 16, y: 7)
 
             VStack(spacing: 6) {
                 Text(hasResult ? "Cerita besarmu" : "Lihat perjalananmu lebih utuh")
@@ -126,11 +133,12 @@ private struct OverallInsightHero: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 26)
         .padding(.horizontal)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.indigo.opacity(0.16), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
         }
+        .shadow(color: Color.black.opacity(0.03), radius: 12, y: 5)
     }
 }
 
@@ -152,7 +160,11 @@ private struct OverallInsightIntroduction: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
-        .background(.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+        }
     }
 }
 
@@ -173,7 +185,11 @@ private struct OverallInsightLoadingView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 42)
         .padding(.horizontal, 24)
-        .background(.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+        }
     }
 }
 
@@ -182,55 +198,26 @@ private struct OverallInsightCards: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            OverallInsightCard(
+            InsightContentCard(
                 icon: "rectangle.3.group.bubble.fill",
                 title: "Gambaran Besar",
-                text: insight.overview,
-                color: .indigo
+                text: insight.overview
             )
-            OverallInsightCard(
+            InsightContentCard(
                 icon: "point.3.connected.trianglepath.dotted",
                 title: "Pola yang Berkembang",
-                text: insight.patterns,
-                color: .orange
+                text: insight.patterns
             )
-            OverallInsightCard(
+            InsightContentCard(
                 icon: "scope",
                 title: "Yang Sedang Menonjol",
-                text: insight.recentFocus,
-                color: .teal
+                text: insight.recentFocus
             )
 
             Text("Diperbarui \(insight.updatedAt.formatted(date: .abbreviated, time: .shortened))")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
-        }
-    }
-}
-
-private struct OverallInsightCard: View {
-    let icon: String
-    let title: String
-    let text: String
-    let color: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label(title, systemImage: icon)
-                .font(.headline)
-                .foregroundStyle(color)
-            Text(text)
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(20)
-        .background(.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(alignment: .leading) {
-            Capsule()
-                .fill(color.gradient)
-                .frame(width: 4)
-                .padding(.vertical, 18)
         }
     }
 }
