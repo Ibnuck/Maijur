@@ -5,21 +5,42 @@ struct JournalDetailView: View {
     let store: JournalStore
     let onEdit: () -> Void
 
+    private var hasCurrentInsight: Bool {
+        store.history.contains {
+            $0.belongsToCurrentRevision(of: journal)
+                && $0.isCompatible(with: JournalAnalysisService.promptVersion)
+        }
+    }
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(journal.date, format: .dateTime.weekday(.wide).month(.wide).day().year())
-                        .font(.subheadline.weight(.semibold))
+        ZStack {
+            JournalDetailBackground()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    JournalDetailDateHeader(date: journal.date)
+
+                    JournalPage(text: journal.text)
+
+                    NavigationLink {
+                        JournalInsightView(journal: journal, store: store)
+                    } label: {
+                        JournalInsightCallout(hasInsight: hasCurrentInsight)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("open-insights-button")
+
+                    Label("Jurnal dan insight tersimpan secara lokal di perangkat ini.", systemImage: "lock.fill")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(journal.text)
-                        .font(.body)
-                        .textSelection(.enabled)
-                        .accessibilityIdentifier("journal-detail-text")
+                        .padding(.horizontal, 4)
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
+                .frame(maxWidth: 700, alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
-            .padding()
-            .frame(maxWidth: 700, alignment: .leading)
         }
         .navigationTitle("Jurnal")
         .navigationBarTitleDisplayMode(.inline)
@@ -31,33 +52,121 @@ struct JournalDetailView: View {
                 .accessibilityIdentifier("edit-journal-button")
             }
         }
-        .safeAreaInset(edge: .bottom) {
-            NavigationLink {
-                JournalInsightView(journal: journal, store: store)
-            } label: {
-                Label(
-                    store.history.contains(where: {
-                        $0.belongsToCurrentRevision(of: journal)
-                            && $0.isCompatible(with: JournalAnalysisService.promptVersion)
-                    })
-                        ? "Buka Insight"
-                        : "Buat Insight",
-                    systemImage: "sparkles"
-                )
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .padding(.horizontal)
-            .padding(.vertical, 10)
-            .background(.bar)
-            .accessibilityIdentifier("open-insights-button")
-        }
     }
 }
 
 #Preview("Journal detail") {
     NavigationStack {
         JournalDetailView(journal: MockData.previewJournal, store: MockData.populatedStore(), onEdit: {})
+    }
+}
+
+private struct JournalDetailBackground: View {
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Color(.systemGroupedBackground)
+            Circle()
+                .fill(Color.indigo.opacity(0.08))
+                .frame(width: 260, height: 260)
+                .blur(radius: 50)
+                .offset(x: 100, y: -140)
+        }
+        .ignoresSafeArea()
+    }
+}
+
+private struct JournalDetailDateHeader: View {
+    let date: Date
+
+    var body: some View {
+        HStack(spacing: 14) {
+            VStack(spacing: 1) {
+                Text(date, format: .dateTime.day())
+                    .font(.title.weight(.bold))
+                Text(date, format: .dateTime.month(.abbreviated))
+                    .font(.caption.weight(.bold))
+                    .textCase(.uppercase)
+                    .foregroundStyle(.indigo)
+            }
+            .frame(width: 58, height: 58)
+            .background(Color.indigo.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(date, format: .dateTime.weekday(.wide))
+                    .font(.title3.weight(.semibold))
+                Text(date, format: .dateTime.month(.wide).day().year())
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 4)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(date.formatted(date: .complete, time: .omitted))
+    }
+}
+
+private struct JournalPage: View {
+    let text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("Catatanmu", systemImage: "book.pages")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.indigo)
+
+            Divider()
+
+            Text(text)
+                .font(.body)
+                .lineSpacing(7)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("journal-detail-text")
+        }
+        .padding(18)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+        }
+        .shadow(color: Color.black.opacity(0.03), radius: 12, y: 5)
+    }
+}
+
+private struct JournalInsightCallout: View {
+    let hasInsight: Bool
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: hasInsight ? "sparkles.rectangle.stack.fill" : "sparkles")
+                .font(.system(size: 21, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 46, height: 46)
+                .background(Color.indigo.gradient, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(hasInsight ? "Buka Insight" : "Temukan Insight")
+                    .font(.headline)
+                Text(hasInsight ? "Lihat kembali inti cerita dan ruang refleksimu." : "Temukan inti cerita, tema, dan ruang refleksi personal.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
+            }
+
+            Spacer(minLength: 8)
+
+            Image(systemName: "chevron.right")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(16)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.indigo.opacity(0.12), lineWidth: 1)
+        }
+        .contentShape(Rectangle())
     }
 }
