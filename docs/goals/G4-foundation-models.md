@@ -1,30 +1,40 @@
 # G4 — Foundation Models Generation
 
+**Status:** Complete for the current MVP scope
+
 ## Objective
 
-Connect optional on-device Foundation Models generation to the accepted local
-journaling and History flows.
+Connect optional on-device Foundation Models generation to per-journal Insight
+and incremental Overall Insight flows.
 
 ## Tasks
 
-- [ ] Check runtime model availability and device/language prerequisites.
-- [ ] Define compact `@Generable` output types.
-- [ ] Implement the summary session.
-- [ ] Implement the reflection session using summary plus latest digest.
-- [ ] Implement digest update using previous digest plus new summary.
-- [ ] Add date and coverage metadata to prompts and stored outputs.
-- [ ] Add runtime token/context measurement and a deliberate oversized-input
-  strategy.
-- [ ] Add model-unavailable, generation-failure, and incomplete-output states.
-- [ ] Save only valid completed outputs as History snapshots.
-- [ ] Confirm previously processed raw journals are not unnecessarily resent.
-- [ ] Evaluate output quality in Indonesian on the target device.
-- [ ] Create a fresh reviewer after each task and after the goal.
+- [x] Check runtime model availability before generation.
+- [x] Define compact `@Generable` output types.
+- [x] Implement separate summary, reflection, and theme tasks.
+- [x] Implement incremental Overall Insight from the previous result plus at
+  most three new per-journal insights per session.
+- [x] Add journal dates and coverage IDs to prompts and stored outputs.
+- [x] Enforce a visible 2,400-character journal limit and retain a
+  paragraph-aware chunking path for oversized legacy input.
+- [x] Add model-unavailable, generation-failure, invalid-perspective, and
+  malformed-output handling.
+- [x] Save only completed structured outputs as local insight snapshots.
+- [x] Avoid resending raw historical journals and previously covered insight
+  IDs during Overall Insight updates.
+- [x] Validate the current English-output strategy on the target iPhone 17.
+
+Runtime token-usage instrumentation and broader language evaluation are G5
+validation work. They are not required to call the current MVP generation flow
+implemented.
 
 ## Acceptance criteria
 
 - Summary and reflection use separate sessions.
-- Digest is rolling and does not require all raw historical journals.
-- Generated output is stored locally and visible in History.
+- Theme extraction is separate from summary and reflection.
+- Overall Insight is incremental and does not require raw historical journals.
+- Generated output is stored locally and visible from its journal or the
+  Overall Insight entry point.
 - A model failure never deletes or corrupts the source journal.
-- Token usage and output quality are measured rather than guessed.
+- Model availability and output quality are verified on the target device;
+  quantitative token and performance measurement continues in G5.

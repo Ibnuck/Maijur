@@ -1,32 +1,33 @@
 # MaiJur Documentation
 
-This folder is the working source of truth for MaiJur while the app is being
-built. It keeps product decisions, agent roles, specifications, and ordered
-goals separate from the Swift source code.
+This folder is the working source of truth for MaiJur. The initial MVP feature
+set through G4 is implemented; G5 quality validation is next. These documents
+keep product decisions, specifications, and ordered goals separate from the
+Swift source code.
 
 ## Structure
 
 ```text
 docs/
-├── agents/       Role instructions for brainstorming, implementation, review
+├── agents/       Archived role instructions from the engineering-loop experiment
 ├── decisions/    Decisions that affect multiple goals
 ├── goals/        Ordered delivery goals and task checklists
 ├── research/     Notes and links from the Foundation Models research
 ├── specs/        Scope and acceptance criteria for each goal
-└── workflow/     The engineering loop used for every task
+└── workflow/     Archived engineering-loop reference
 ```
 
 ## How to use the documents
 
 1. Select the first incomplete goal in `goals/roadmap.md`.
 2. Read its matching goal file and spec.
-3. Run the brainstormer role to confirm scope and acceptance criteria.
-4. Let the implementer work only on the approved task.
-5. Create a fresh reviewer for the completed task or goal.
-6. Mark the goal complete only when review findings and verification are done.
+3. Keep implementation limited to that goal's remaining acceptance criteria.
+4. Verify the change with the smallest relevant build, test, or device check.
+5. Update the goal and any affected decision when actual behavior changes.
 
-The initial implementation goal is `G1 — Native UI`. It must use mock data so
-the UI can be evaluated before persistence and Foundation Models are added.
+The active goal is `G5 — Quality, Accessibility, and Performance`. G1–G4
+describe the implemented MVP foundation and should not be reopened to add new
+scope unless a defect requires it.
 
 ## Scope rule
 

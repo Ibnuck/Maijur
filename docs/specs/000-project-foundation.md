@@ -27,19 +27,20 @@ analytics, cloud backup, subscriptions, or a custom backend.
 - Native Apple controls, navigation, typography, and accessibility behavior.
 - No third-party dependency unless a later decision records a strong reason.
 
-## Planned source boundaries
+## Current source boundaries
 
 ```text
 MaiJur/
-├── App/         App entry and dependency composition
-├── Features/    User-facing feature areas
-├── Data/        SwiftData models and local repositories
-├── AI/          Foundation Models sessions and output mapping
+├── App/         Store composition and deterministic mock data
+├── Features/
+│   ├── Journal/ Journal domain, SwiftData record, editor, list, and detail
+│   ├── Insights/Foundation Models services, stored outputs, and Insight UI
+│   └── History/ Per-journal insight snapshot storage types
 └── Shared/      Small reusable UI and domain utilities
 ```
 
-These are boundaries, not a requirement to create a layer or protocol for
-every file.
+The project intentionally keeps these concrete boundaries small instead of
+adding repository protocols or layers without a second implementation.
 
 ## Acceptance criteria
 

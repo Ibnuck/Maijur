@@ -1,25 +1,27 @@
-# G1 — Native UI With Mock Data
+# G1 — Native UI Foundation
+
+**Status:** Complete
 
 ## Objective
 
-Finish the first usable visual flow of MaiJur before connecting persistence or
-Foundation Models.
+Deliver the native visual flow and reusable UI states that later persistence
+and Foundation Models work can use. Deterministic mock data remains available
+for previews and tests.
 
 ## Tasks
 
-- [ ] Create the Xcode SwiftUI app shell and confirm the target configuration.
-- [ ] Add the two primary destinations: Journals and History.
-- [ ] Define a small mock journal data source for previews and UI inspection.
-- [ ] Build the populated Journals list.
-- [ ] Build the empty Journals state.
-- [ ] Build the journal editor with date and text input.
-- [ ] Build journal detail and mock edit/delete affordances.
-- [ ] Build the populated History list and History detail state.
-- [ ] Build empty and unavailable-insight states.
-- [ ] Add loading-like presentation states needed by later persistence/AI flows.
-- [ ] Add previews for the main states and Dynamic Type sizes.
-- [ ] Check VoiceOver labels and obvious touch target issues.
-- [ ] Run a fresh reviewer for each completed task and then for the goal.
+- [x] Create the Xcode SwiftUI app shell and confirm the target configuration.
+- [x] Use Journals as the single root destination.
+- [x] Define mock journal data for previews and deterministic UI inspection.
+- [x] Build populated and empty Journals states.
+- [x] Build the journal editor with date, text input, and character feedback.
+- [x] Build journal detail with edit and delete affordances.
+- [x] Build dedicated per-journal and overall Insight pages.
+- [x] Build empty, loading, result, unavailable, and error states for insights.
+- [x] Add native navigation, accessible labels, and stable UI-test identifiers.
+
+Dynamic Type, VoiceOver, contrast, and touch-target validation remain part of
+G5 rather than blocking the UI foundation.
 
 ## Explicit non-goals
 
@@ -31,8 +33,10 @@ Foundation Models.
 ## Acceptance criteria
 
 - The user can understand the app's purpose from the initial screen.
-- The user can navigate Journals and History.
-- Create, read, edit, and delete flows are represented with mock data.
+- The user can navigate from Journals to journal detail, editor, per-journal
+  Insight, and Overall Insight.
+- Create, read, edit, and delete flows can be inspected with mock or in-memory
+  data.
 - The UI remains usable in empty, populated, and unavailable-insight states.
-- The visual design uses native Apple components and supports Dynamic Type.
+- The visual design uses native Apple components and scalable system text.
 - The UI can be reviewed without a network connection or a persistent store.

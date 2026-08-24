@@ -1,5 +1,7 @@
 # G2 — Local Journaling CRUD
 
+**Status:** Complete
+
 ## Objective
 
 Connect the accepted UI to local device storage and deliver the initial CRUD
@@ -7,16 +9,16 @@ feature set.
 
 ## Tasks
 
-- [ ] Define the local journal model and revision metadata.
-- [ ] Configure the SwiftData model container.
-- [ ] Add a focused local repository or data boundary.
-- [ ] Replace mock list data with persisted reads.
-- [ ] Implement create and save.
-- [ ] Implement edit while preserving journal identity.
-- [ ] Implement intentional delete confirmation.
-- [ ] Handle store-open and save failures without losing the source text.
-- [ ] Verify persistence across relaunch.
-- [ ] Create a fresh reviewer after each task and after the goal.
+- [x] Define the local journal model, revision, and content-hash metadata.
+- [x] Configure the SwiftData model container.
+- [x] Keep persistence orchestration behind `JournalStore` rather than views.
+- [x] Load persisted journals into the Journals flow.
+- [x] Implement create and save.
+- [x] Implement edit while preserving journal identity.
+- [x] Implement intentional delete confirmation.
+- [x] Handle store-open and save failures with visible recoverable errors.
+- [x] Verify persistence by reopening the same model container in tests and on
+  the target device.
 
 ## Acceptance criteria
 

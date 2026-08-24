@@ -1,25 +1,25 @@
 # MaiJur Goal Roadmap
 
-Goals are completed in order. The first implementation goal is UI, using mock
-data. Do not start a later goal while the active goal has unresolved review
-findings.
+The initial feature goals G0–G4 are implemented. G5 is the active quality pass
+before the personal-project MVP is considered finished.
 
 | ID | Goal | Priority | Status | Depends on |
 |---|---|---:|---|---|
 | G0 | Project foundation and agent workflow | P0 | Complete | — |
-| G1 | Native UI with mock data | P0 | Next | G0 |
-| G2 | Local journaling CRUD | P0 | Backlog | G1 |
-| G3 | Per-journal insight snapshots | P1 | Backlog | G2 |
-| G4 | Foundation Models generation | P1 | Backlog | G3 |
-| G5 | Quality, accessibility, and performance | P1 | Backlog | G4 |
+| G1 | Native UI foundation | P0 | Complete | G0 |
+| G2 | Local journaling CRUD | P0 | Complete | G1 |
+| G3 | Per-journal insight snapshots | P1 | Complete | G2 |
+| G4 | Foundation Models generation | P1 | Complete | G3 |
+| G5 | Quality, accessibility, and performance | P1 | Next | G4 |
 
 ## Status definitions
 
 - `Backlog` — defined but not started.
 - `Next` — the next implementation goal after its dependency is complete.
 - `In progress` — the current goal has active tasks.
-- `In review` — implementation is done and a fresh reviewer is evaluating it.
-- `Complete` — acceptance criteria, review, and verification are complete.
+- `In review` — implementation is done and is being checked against its
+  acceptance criteria.
+- `Complete` — acceptance criteria and proportionate verification are complete.
 - `Blocked` — an external issue prevents progress and is recorded in the goal.
 
 ## Goal order
@@ -32,7 +32,8 @@ and future source skeleton. See `G0-project-foundation.md` and
 
 ### G1 — Native UI
 
-Build the small native Apple navigation and all initial states with mock data.
+Build the small native Apple navigation and initial states, supported by mock
+data for previews and deterministic UI inspection.
 See `G1-native-ui.md` and `specs/001-native-ui.md`.
 
 ### G2 — Local journaling CRUD
@@ -48,7 +49,8 @@ See `G3-history-snapshot.md` and `specs/003-history.md`.
 
 ### G4 — Foundation Models
 
-Add separate sessions, structured output, rolling digest, and failure handling.
+Add separate structured-generation tasks for per-journal insight, incremental
+Overall Insight, validation/repair, and failure handling.
 See `G4-foundation-models.md` and `specs/004-foundation-models.md`.
 
 ### G5 — Quality

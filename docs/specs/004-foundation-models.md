@@ -2,35 +2,38 @@
 
 ## Goal
 
-Add optional on-device generation for a journal summary, personal reflection,
-and rolling digest while preserving local-first journaling and the per-journal
-insight snapshot contract.
+Add optional on-device generation for per-journal insights and an incremental
+Overall Insight while preserving local-first journaling.
 
 ## Session design
 
 Use separate sessions with one clear responsibility each:
 
-1. **Summary session** receives the current journal and returns structured
-   summary data.
-2. **Reflection session** receives the current summary, the latest digest, and
-   date metadata; it does not receive all historical raw journals.
-3. **Digest update session** receives the previous digest and the new summary to
-   produce the next compact digest.
+1. **Summary task** receives the current journal and its date. Long legacy input
+   can be summarized in chunks and merged by a separate synthesis session.
+2. **Reflection task** receives the current summary and date. It addresses the
+   author only as `you`/`your`; a correction session repairs first-person output.
+3. **Theme task** receives the current summary and returns short noun phrases,
+   not another reflection or narrative summary.
+4. **Overall Insight update** receives the previous Overall Insight plus at most
+   three new dated per-journal insight snapshots. It never receives all raw
+   historical journals.
 
-The application stores the resulting digest locally. It is not treated as
-permanent model-session memory.
+Each task uses a fresh `LanguageModelSession` so transcripts do not accumulate
+across unrelated responsibilities.
 
 ## Output direction
 
 The output should be useful for self-understanding rather than artificially
 short:
 
-- summary: concise but complete, normally two or three short paragraphs plus
-  a small set of observed themes;
+- summary: a neutral, concise account preserving events, thoughts, stated
+  emotions, and outcomes;
 - reflection: normally two to four short paragraphs plus two or three optional
-  reflective questions;
-- digest: a compact, cumulative description of recurring themes, preferences,
-  emotional patterns, and recent context grounded in the available journals.
+  reflective questions, written directly to the author;
+- themes: two to five short noun phrases;
+- Overall Insight: distinct overview, recurring patterns supported by multiple
+  dated insights, and a recent focus based on the newest supplied insight.
 
 Initial target ranges are hypotheses to validate on the target device, not
 visible product limits. `maximumResponseTokens` is a safety ceiling; it must
@@ -38,14 +41,11 @@ not be set so low that valid output is routinely truncated.
 
 ## Input and context strategy
 
-- Start testing with roughly 2,000–2,500 characters for one journal as an
-  internal budget hypothesis, then tune from measured runtime token usage and
-  output quality.
-- Do not show a warning merely because the journal reaches this initial
-  hypothesis.
-- Check token usage and context capacity at runtime.
+- The editor enforces a visible limit of 2,400 characters for new and edited
+  journals. This is a product input limit, not an exact token guarantee.
 - If an entry is too large, preserve the original locally and use a deliberate
-  paragraph-aware condensation or chunking strategy. Never silently cut text.
+  paragraph- and sentence-aware chunking strategy. Never silently cut stored
+  journal text.
 - Keep instructions, prompts, `@Generable` schema, and requested output within
   the session context budget.
 - Use dates as explicit metadata so newer summaries can be prioritized without
@@ -66,10 +66,11 @@ constraints belong in instructions, not inside untrusted journal text.
   unavailable, unsupported, busy, or unable to complete a request.
 - Save only completed, valid structured output as an insight snapshot.
 - Keep the source journal even if generation fails.
-- Log diagnostics locally without logging full private journal text by default.
-- Validate Indonesian output quality and device language/model availability on
-  the actual target configuration; do not assume language support from the UI
-  locale alone.
+- Present a recoverable error without exposing or copying private journal text
+  into the error message.
+- The current generated content strategy is English while the surrounding UI
+  is Indonesian. Any future Indonesian generation requires separate quality
+  validation and must not be inferred from the UI locale.
 
 ## Out of scope
 
@@ -80,10 +81,11 @@ constraints belong in instructions, not inside untrusted journal text.
 
 ## Acceptance criteria
 
-- Summary, reflection, and digest are generated through the defined session
-  boundaries.
+- Summary, reflection, themes, and Overall Insight are generated through the
+  defined task boundaries.
 - A successful run creates the corresponding per-journal insight snapshot.
 - A failed run never deletes or corrupts the source journal.
-- Previously processed raw journals are not repeatedly included in the next
-  request when the rolling digest is sufficient.
-- Runtime context and output usage can be inspected during testing.
+- Previously processed raw journals and covered per-journal insight IDs are not
+  repeatedly included in Overall Insight updates.
+- Runtime context, token usage, latency, and output quality are explicit G5
+  validation items.

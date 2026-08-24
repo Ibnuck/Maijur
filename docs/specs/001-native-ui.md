@@ -43,7 +43,7 @@ onboarding, accounts, or tabs in the first version.
 ### Insight
 
 - dedicated presentation away from the journal input and reading surface;
-- story essence, reflection space, and developing-pattern sections;
+- story essence, reflection space, and main-theme sections;
 - clear empty, generating, result, and unavailable states;
 - results remain associated with their source journal and are reopened through
   that journal's detail.
