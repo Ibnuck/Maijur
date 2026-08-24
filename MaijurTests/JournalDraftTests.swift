@@ -32,6 +32,41 @@ struct JournalDraftTests {
         #expect(draft.text == "  Something worth remembering.  ")
     }
 
+    @Test("Draft at the character limit is valid")
+    func exactCharacterLimitIsValid() {
+        let draft = JournalDraft(
+            date: Date(timeIntervalSince1970: 1_777_593_600),
+            text: String(repeating: "a", count: JournalDraft.maximumCharacterCount)
+        )
+
+        #expect(draft.isValid)
+        #expect(draft.remainingCharacterCount == 0)
+        #expect(draft.characterLimitProgress == 1)
+    }
+
+    @Test("Draft over the character limit is invalid")
+    func overCharacterLimitIsInvalid() {
+        let draft = JournalDraft(
+            date: Date(timeIntervalSince1970: 1_777_593_600),
+            text: String(repeating: "a", count: JournalDraft.maximumCharacterCount + 1)
+        )
+
+        #expect(!draft.isValid)
+    }
+
+    @Test("Editor input stops at the character limit")
+    func updateTextEnforcesCharacterLimit() {
+        var draft = JournalDraft(
+            date: Date(timeIntervalSince1970: 1_777_593_600),
+            text: ""
+        )
+
+        draft.updateText(String(repeating: "a", count: JournalDraft.maximumCharacterCount + 50))
+
+        #expect(draft.characterCount == JournalDraft.maximumCharacterCount)
+        #expect(draft.isValid)
+    }
+
     @Test("An unchanged draft is not dirty")
     func unchangedDraftIsNotDirty() {
         let draft = JournalDraft(entry: original)

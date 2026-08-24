@@ -112,7 +112,7 @@ struct JournalAnalysisService {
 }
 
 enum JournalAnalysisInput {
-    static let maximumCharactersPerChunk = 2_400
+    static let maximumCharactersPerChunk = JournalContent.maximumCharacterCount
 
     static func chunks(from text: String) -> [String] {
         guard text.count > maximumCharactersPerChunk else { return [text] }
