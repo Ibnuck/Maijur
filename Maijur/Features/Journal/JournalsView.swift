@@ -79,9 +79,10 @@ struct JournalsView: View {
                                         hasInsight: hasCurrentInsight(for: journal)
                                     )
                                 }
-                                .listRowInsets(EdgeInsets(top: 12, leading: 18, bottom: 12, trailing: 16))
-                                .listRowBackground(Color(.secondarySystemGroupedBackground))
-                                .alignmentGuide(.listRowSeparatorLeading) { _ in 68 }
+                                .listRowInsets(EdgeInsets(top: 13, leading: 18, bottom: 13, trailing: 16))
+                                .listRowBackground(Color.clear)
+                                .listRowSeparatorTint(Color.primary.opacity(0.10))
+                                .alignmentGuide(.listRowSeparatorLeading) { _ in 66 }
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button("Hapus", systemImage: "trash", role: .destructive) {
                                         journalPendingDeletion = journal
@@ -101,7 +102,7 @@ struct JournalsView: View {
                         }
                     }
                 }
-                .listStyle(.insetGrouped)
+                .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .accessibilityIdentifier("journals-root-populated")
             }
@@ -174,40 +175,38 @@ private struct JournalRow: View {
     let hasInsight: Bool
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: 14) {
             VStack(spacing: 2) {
                 Text(journal.date, format: .dateTime.day())
                     .font(.title2.weight(.bold))
                     .monospacedDigit()
-                Text(journal.date.formatted(
-                    .dateTime
-                        .weekday(.abbreviated)
-                        .locale(Locale(identifier: "id_ID"))
-                ))
-                    .font(.caption2.weight(.bold))
+
+                HStack(spacing: 3) {
+                    Text(journal.date.formatted(
+                        .dateTime
+                            .weekday(.abbreviated)
+                            .locale(Locale(identifier: "id_ID"))
+                    ))
                     .textCase(.uppercase)
-                    .foregroundStyle(.indigo)
-            }
-            .frame(width: 42)
 
-            Capsule()
-                .fill(Color.indigo.opacity(0.22))
-                .frame(width: 2, height: 58)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(journal.text)
-                    .font(.body)
-                    .foregroundStyle(.primary)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
-
-                if hasInsight {
-                    Label("Insight tersedia", systemImage: "sparkles")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.indigo)
+                    if hasInsight {
+                        Image(systemName: "sparkles")
+                            .accessibilityHidden(true)
+                    }
                 }
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.indigo)
             }
+            .frame(width: 48)
+
+            Text(journal.text)
+                .font(.body)
+                .foregroundStyle(.primary)
+                .lineLimit(3)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .accessibilityHint(hasInsight ? "Insight tersedia" : "")
     }
 }
 
