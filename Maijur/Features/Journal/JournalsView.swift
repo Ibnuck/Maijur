@@ -24,17 +24,28 @@ struct JournalsView: View {
                 }
             case .loaded:
                 List {
-                    ForEach(store.journals) { journal in
+                    Section {
                         NavigationLink {
-                            JournalDetailView(journal: journal, store: store) {
-                                editorRoute = .edit(journal)
-                            }
+                            OverallInsightView(store: store)
                         } label: {
-                            JournalRow(journal: journal)
+                            OverallInsightRow(store: store)
                         }
+                        .accessibilityIdentifier("overall-insight-link")
                     }
-                    .onDelete { offsets in
-                        journalPendingDeletion = offsets.compactMap { store.journals[safe: $0] }.first
+
+                    Section("Jurnalmu") {
+                        ForEach(store.journals) { journal in
+                            NavigationLink {
+                                JournalDetailView(journal: journal, store: store) {
+                                    editorRoute = .edit(journal)
+                                }
+                            } label: {
+                                JournalRow(journal: journal)
+                            }
+                        }
+                        .onDelete { offsets in
+                            journalPendingDeletion = offsets.compactMap { store.journals[safe: $0] }.first
+                        }
                     }
                 }
                 .listStyle(.insetGrouped)
@@ -68,6 +79,37 @@ struct JournalsView: View {
         } message: { _ in
             Text("Jurnal ini akan dihapus dari perangkat ini.")
         }
+    }
+}
+
+private struct OverallInsightRow: View {
+    let store: JournalStore
+
+    private var subtitle: String {
+        let pendingCount = store.pendingOverallInsights.count
+        if pendingCount > 0 { return "\(pendingCount) insight baru siap digabungkan" }
+        if store.overallInsight != nil { return "Sudah mencakup insight terbaru" }
+        return "Temukan pola dari insight jurnalmu"
+    }
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "sparkles.rectangle.stack.fill")
+                .font(.title3)
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, .mint)
+                .frame(width: 44, height: 44)
+                .background(Color.indigo.gradient, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Insight Keseluruhan")
+                    .font(.headline)
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 

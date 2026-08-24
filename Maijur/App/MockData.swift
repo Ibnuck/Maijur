@@ -12,6 +12,22 @@ enum MockData {
         JournalStore()
     }
 
+    static func overallInsightStore() -> JournalStore {
+        JournalStore(
+            journals: journals,
+            history: history,
+            overallInsight: OverallInsightSnapshot(
+                id: UUID(uuidString: "30000000-0000-0000-0000-000000000001")!,
+                createdAt: Date(timeIntervalSince1970: 1_787_432_500),
+                updatedAt: Date(timeIntervalSince1970: 1_787_432_500),
+                overview: "Akhir-akhir ini, momen yang paling bermakna muncul ketika ada ruang untuk melambat dan terhubung dengan orang lain.",
+                patterns: "Ketenangan dan hubungan yang sudah lama terjalin berulang kali memberi rasa pulih dan nyaman.",
+                recentFocus: "Perhatian terbaru lebih banyak tertuju pada menikmati lingkungan sekitar dan memberi ruang bagi pikiran.",
+                coveredInsightIDs: history.map(\.id)
+            )
+        )
+    }
+
     static func loadingStore() -> JournalStore {
         JournalStore(journalsPhase: .loading, historyPhase: .loading)
     }

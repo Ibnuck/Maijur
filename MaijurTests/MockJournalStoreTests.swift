@@ -101,6 +101,7 @@ struct JournalStoreTests {
         let container = try ModelContainer(
             for: StoredJournal.self,
             StoredHistorySnapshot.self,
+            StoredOverallInsight.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let store = JournalStore(modelContext: container.mainContext)
@@ -124,9 +125,61 @@ struct JournalStoreTests {
         )
         #expect(store.history == [snapshot])
 
+        let overall = try #require(
+            store.saveOverallInsight(
+                overview: "Overview",
+                patterns: "Patterns",
+                recentFocus: "Recent focus",
+                coveredInsightIDs: [snapshot.id]
+            )
+        )
+        let reloadedStore = JournalStore(modelContext: container.mainContext)
+        #expect(reloadedStore.overallInsight == overall)
+        #expect(reloadedStore.pendingOverallInsights.isEmpty)
+
         #expect(store.deleteJournal(id: journal.id))
         #expect(store.journals.isEmpty)
         #expect(store.history.isEmpty)
+        #expect(store.overallInsight == nil)
+    }
+
+    @Test("Overall insight only receives per-journal insights not covered before")
+    func overallInsightTracksIncrementalCoverage() throws {
+        let first = journal(id: 1, timestamp: 1_700_000_000, text: "First")
+        let second = journal(id: 2, timestamp: 1_800_000_000, text: "Second")
+        let firstInsight = HistorySnapshot(
+            id: UUID(uuidString: "30000000-0000-0000-0000-000000000001")!,
+            sourceJournalID: first.id,
+            sourceJournalDate: first.date,
+            createdAt: first.date,
+            summary: "First summary",
+            reflection: "First reflection",
+            digest: "First theme"
+        )
+        let secondInsight = HistorySnapshot(
+            id: UUID(uuidString: "30000000-0000-0000-0000-000000000002")!,
+            sourceJournalID: second.id,
+            sourceJournalDate: second.date,
+            createdAt: second.date,
+            summary: "Second summary",
+            reflection: "Second reflection",
+            digest: "Second theme"
+        )
+        let store = JournalStore(
+            journals: [first, second],
+            history: [secondInsight, firstInsight],
+            overallInsight: OverallInsightSnapshot(
+                id: UUID(),
+                createdAt: first.date,
+                updatedAt: first.date,
+                overview: "Overview",
+                patterns: "Patterns",
+                recentFocus: "Recent",
+                coveredInsightIDs: [firstInsight.id]
+            )
+        )
+
+        #expect(store.pendingOverallInsights.map(\.id) == [secondInsight.id])
     }
 
     private func journal(id: UInt8, timestamp: TimeInterval, text: String) -> JournalEntry {

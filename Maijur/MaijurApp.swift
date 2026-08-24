@@ -20,6 +20,7 @@ struct MaijurApp: App {
             let container = try ModelContainer(
                 for: StoredJournal.self,
                 StoredHistorySnapshot.self,
+                StoredOverallInsight.self,
                 configurations: configuration
             )
             modelContainer = container

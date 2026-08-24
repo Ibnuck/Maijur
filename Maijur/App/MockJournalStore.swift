@@ -8,6 +8,7 @@ final class JournalStore {
     private let modelContext: ModelContext?
     private(set) var journals: [JournalEntry]
     private(set) var history: [HistorySnapshot]
+    private(set) var overallInsight: OverallInsightSnapshot?
     var journalsPhase: LoadPhase
     var historyPhase: LoadPhase
     var insightLoadingJournalIDs: Set<UUID>
@@ -16,6 +17,7 @@ final class JournalStore {
     init(
         journals: [JournalEntry] = [],
         history: [HistorySnapshot] = [],
+        overallInsight: OverallInsightSnapshot? = nil,
         journalsPhase: LoadPhase = .loaded,
         historyPhase: LoadPhase = .loaded,
         insightLoadingJournalIDs: Set<UUID> = [],
@@ -24,6 +26,7 @@ final class JournalStore {
         modelContext = nil
         self.journals = journals.sorted { $0.date > $1.date }
         self.history = history
+        self.overallInsight = overallInsight
         self.journalsPhase = journalsPhase
         self.historyPhase = historyPhase
         self.insightLoadingJournalIDs = insightLoadingJournalIDs
@@ -34,6 +37,7 @@ final class JournalStore {
         self.modelContext = modelContext
         journals = []
         history = []
+        overallInsight = nil
         journalsPhase = .loading
         historyPhase = .loading
         insightLoadingJournalIDs = []
@@ -47,6 +51,24 @@ final class JournalStore {
 
     func clearPersistenceError() {
         persistenceError = nil
+    }
+
+    var currentJournalInsights: [HistorySnapshot] {
+        var seenJournalIDs = Set<UUID>()
+        return history
+            .filter { snapshot in
+                guard let journal = journals.first(where: { $0.id == snapshot.sourceJournalID }),
+                      snapshot.belongsToCurrentRevision(of: journal),
+                      seenJournalIDs.insert(snapshot.sourceJournalID).inserted
+                else { return false }
+                return true
+            }
+            .sorted { $0.sourceJournalDate < $1.sourceJournalDate }
+    }
+
+    var pendingOverallInsights: [HistorySnapshot] {
+        let coveredIDs = Set(overallInsight?.coveredInsightIDs ?? [])
+        return currentJournalInsights.filter { !coveredIDs.contains($0.id) }
     }
 
     @discardableResult
@@ -84,6 +106,9 @@ final class JournalStore {
         let entry = JournalEntry(id: id, date: date, text: text)
         guard let modelContext else {
             journals[index] = entry
+            let removedIDs = history.filter { $0.sourceJournalID == id }.map(\.id)
+            history.removeAll { $0.sourceJournalID == id }
+            resetOverallInsightIfCovering(removedIDs)
             sortJournals()
             return entry
         }
@@ -91,6 +116,7 @@ final class JournalStore {
         do {
             let descriptor = FetchDescriptor<StoredJournal>(predicate: #Predicate { $0.id == id })
             guard let record = try modelContext.fetch(descriptor).first else { return nil }
+            try removeInsights(for: id)
             record.journalDate = date
             record.content = text
             record.updatedAt = .now
@@ -109,14 +135,15 @@ final class JournalStore {
     func deleteJournal(id: UUID) -> Bool {
         guard let modelContext else {
             journals.removeAll { $0.id == id }
+            let removedIDs = history.filter { $0.sourceJournalID == id }.map(\.id)
             history.removeAll { $0.sourceJournalID == id }
+            resetOverallInsightIfCovering(removedIDs)
             return true
         }
 
         do {
             let journalDescriptor = FetchDescriptor<StoredJournal>(predicate: #Predicate { $0.id == id })
-            let historyDescriptor = FetchDescriptor<StoredHistorySnapshot>(predicate: #Predicate { $0.sourceJournalID == id })
-            try modelContext.fetch(historyDescriptor).forEach(modelContext.delete)
+            try removeInsights(for: id)
             try modelContext.fetch(journalDescriptor).forEach(modelContext.delete)
             guard saveChanges() else { return false }
             reload()
@@ -137,11 +164,29 @@ final class JournalStore {
         promptVersion: String = "",
         modelVersion: String = ""
     ) -> HistorySnapshot? {
-        guard let modelContext else { return nil }
+        guard let journal = journals.first(where: { $0.id == journalID }) else { return nil }
+        guard let modelContext else {
+            let removedIDs = history.filter { $0.sourceJournalID == journalID }.map(\.id)
+            history.removeAll { $0.sourceJournalID == journalID }
+            resetOverallInsightIfCovering(removedIDs)
+            let snapshot = HistorySnapshot(
+                id: UUID(),
+                sourceJournalID: journal.id,
+                sourceJournalDate: journal.date,
+                createdAt: .now,
+                summary: summary,
+                reflection: reflection,
+                digest: digest,
+                sourceContentHash: journal.contentHash
+            )
+            history.insert(snapshot, at: 0)
+            return snapshot
+        }
 
         do {
             let descriptor = FetchDescriptor<StoredJournal>(predicate: #Predicate { $0.id == journalID })
             guard let journal = try modelContext.fetch(descriptor).first else { return nil }
+            try removeInsights(for: journalID)
             let record = StoredHistorySnapshot(
                 sourceJournalID: journal.id,
                 sourceJournalDate: journal.journalDate,
@@ -164,6 +209,52 @@ final class JournalStore {
         }
     }
 
+    @discardableResult
+    func saveOverallInsight(
+        overview: String,
+        patterns: String,
+        recentFocus: String,
+        coveredInsightIDs: [UUID],
+        promptVersion: String = "",
+        modelVersion: String = ""
+    ) -> OverallInsightSnapshot? {
+        let createdAt = overallInsight?.createdAt ?? .now
+        let snapshot = OverallInsightSnapshot(
+            id: UUID(),
+            createdAt: createdAt,
+            updatedAt: .now,
+            overview: overview,
+            patterns: patterns,
+            recentFocus: recentFocus,
+            coveredInsightIDs: coveredInsightIDs
+        )
+
+        guard let modelContext else {
+            overallInsight = snapshot
+            return snapshot
+        }
+
+        do {
+            try modelContext.fetch(FetchDescriptor<StoredOverallInsight>()).forEach(modelContext.delete)
+            let record = StoredOverallInsight(
+                createdAt: createdAt,
+                overview: overview,
+                patterns: patterns,
+                recentFocus: recentFocus,
+                coveredInsightIDs: coveredInsightIDs,
+                promptVersion: promptVersion,
+                modelVersion: modelVersion
+            )
+            modelContext.insert(record)
+            guard saveChanges() else { return nil }
+            reload()
+            return record.snapshot
+        } catch {
+            persistenceError = "Insight keseluruhan tidak dapat disimpan. Silakan coba lagi."
+            return nil
+        }
+    }
+
     private func reload() {
         guard let modelContext else { return }
 
@@ -177,14 +268,19 @@ final class JournalStore {
             let historyDescriptor = FetchDescriptor<StoredHistorySnapshot>(
                 sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
             )
+            let overallDescriptor = FetchDescriptor<StoredOverallInsight>(
+                sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+            )
             journals = try modelContext.fetch(journalDescriptor).map(\.entry)
             history = try modelContext.fetch(historyDescriptor).map(\.snapshot)
+            overallInsight = try modelContext.fetch(overallDescriptor).first?.snapshot
             journalsPhase = .loaded
             historyPhase = .loaded
             persistenceError = nil
         } catch {
             journals = []
             history = []
+            overallInsight = nil
             journalsPhase = .loaded
             historyPhase = .loaded
             persistenceError = "MaiJur tidak dapat membuka penyimpanan lokal. Jurnal baru tetap terbuka sampai kamu mencoba lagi."
@@ -207,6 +303,26 @@ final class JournalStore {
 
     private func sortJournals() {
         journals.sort { $0.date > $1.date }
+    }
+
+    private func removeInsights(for journalID: UUID) throws {
+        guard let modelContext else { return }
+        let descriptor = FetchDescriptor<StoredHistorySnapshot>(predicate: #Predicate { $0.sourceJournalID == journalID })
+        let records = try modelContext.fetch(descriptor)
+        resetOverallInsightIfCovering(records.map(\.id))
+        records.forEach(modelContext.delete)
+    }
+
+    private func resetOverallInsightIfCovering(_ insightIDs: [UUID]) {
+        guard let overallInsight,
+              !Set(overallInsight.coveredInsightIDs).isDisjoint(with: insightIDs)
+        else { return }
+
+        self.overallInsight = nil
+        guard let modelContext else { return }
+        if let records = try? modelContext.fetch(FetchDescriptor<StoredOverallInsight>()) {
+            records.forEach(modelContext.delete)
+        }
     }
 
 }

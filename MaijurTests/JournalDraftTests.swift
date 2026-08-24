@@ -77,3 +77,26 @@ struct JournalAnalysisInputTests {
         #expect(chunks.joined(separator: " ").contains("Second paragraph."))
     }
 }
+
+@Suite("Overall insight planning")
+struct OverallInsightPlannerTests {
+    @Test("Insights are processed chronologically in groups of at most three")
+    func batchesAreLimitedToThree() {
+        let snapshots = (0..<5).reversed().map { offset in
+            HistorySnapshot(
+                id: UUID(),
+                sourceJournalID: UUID(),
+                sourceJournalDate: Date(timeIntervalSince1970: TimeInterval(offset)),
+                createdAt: Date(timeIntervalSince1970: TimeInterval(offset)),
+                summary: "Summary \(offset)",
+                reflection: "Reflection \(offset)",
+                digest: "Theme \(offset)"
+            )
+        }
+
+        let batches = OverallInsightPlanner.batches(from: snapshots)
+
+        #expect(batches.map(\.count) == [3, 2])
+        #expect(batches.flatMap { $0 }.map(\.sourceJournalDate) == snapshots.reversed().map(\.sourceJournalDate))
+    }
+}

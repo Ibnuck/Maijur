@@ -65,7 +65,7 @@ struct JournalInsightView: View {
         do {
             let analysis = try await JournalAnalysisService().generate(
                 for: journal,
-                latestDigest: store.history.first?.digest
+                overallContext: store.overallInsight?.compactContext
             )
             store.saveHistory(
                 for: journal.id,
@@ -134,8 +134,8 @@ private struct InsightIntroduction: View {
             )
             InsightFeatureRow(
                 icon: "point.3.connected.trianglepath.dotted",
-                title: "Pola yang berkembang",
-                description: "Rangkuman singkat yang menghubungkan tema penting dari waktu ke waktu."
+                title: "Tema Utama",
+                description: "Tema penting yang paling menonjol dalam jurnal ini."
             )
 
             Label("Diproses langsung di iPhone dan disimpan secara lokal.", systemImage: "lock.shield")
@@ -219,7 +219,7 @@ struct InsightResultCards: View {
             )
             InsightResultCard(
                 icon: "point.3.connected.trianglepath.dotted",
-                title: "Pola yang Berkembang",
+                title: "Tema Utama",
                 text: snapshot.digest,
                 color: .orange
             )

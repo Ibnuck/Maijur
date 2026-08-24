@@ -5,7 +5,7 @@ import FoundationModels
 struct JournalAnalysisService {
     static let promptVersion = "journal-insights-v1"
 
-    func generate(for journal: JournalEntry, latestDigest: String?) async throws -> JournalAnalysis {
+    func generate(for journal: JournalEntry, overallContext: String?) async throws -> JournalAnalysis {
         let model = SystemLanguageModel.default
         guard model.isAvailable else {
             throw JournalAnalysisError.modelUnavailable
@@ -15,7 +15,7 @@ struct JournalAnalysisService {
 
         let reflectionSession = LanguageModelSession(
             instructions: """
-            Write a warm, practical personal reflection. Use only the supplied summary and digest. Do not diagnose, make high-stakes claims, or pretend to know the person beyond the supplied context. Write in the same language as the summary.
+            Write a warm, practical personal reflection. Use only the supplied current summary and optional overall context. Give the current dated journal more weight than older context. Do not diagnose, make high-stakes claims, or pretend to know the person beyond the supplied context. Write in the same language as the summary.
             """
         )
         let reflection = try await reflectionSession.respond(
@@ -23,30 +23,29 @@ struct JournalAnalysisService {
             Journal date: \(journal.date.formatted(date: .long, time: .omitted))
             Current summary:
             \(summary.text)
-            Previous digest:
-            \(latestDigest ?? "No previous digest is available.")
+            Optional overall context:
+            \(overallContext ?? "No previous overall context is available.")
             """,
             generating: ReflectionOutput.self,
             options: GenerationOptions(temperature: 0.4, maximumResponseTokens: 1_000)
         ).content
 
-        let digestSession = LanguageModelSession(
+        let themeSession = LanguageModelSession(
             instructions: """
-            Maintain a compact, cumulative journal digest. Keep useful recurring themes and recent context. Use only the supplied prior digest and current summary. Do not add facts or diagnoses. Write in the same language as the summary.
+            Identify the main themes of one dated personal journal. Use only the supplied summary. Stay specific to this journal, keep the result useful for later synthesis, and do not add facts or diagnoses. Write in the same language as the summary.
             """
         )
-        let digest = try await digestSession.respond(
+        let themes = try await themeSession.respond(
             to: """
-            Previous digest:
-            \(latestDigest ?? "No previous digest is available.")
-            New journal summary:
+            Journal date: \(journal.date.formatted(date: .long, time: .omitted))
+            Journal summary:
             \(summary.text)
             """,
-            generating: DigestOutput.self,
-            options: GenerationOptions(temperature: 0.2, maximumResponseTokens: 650)
+            generating: ThemeOutput.self,
+            options: GenerationOptions(temperature: 0.25, maximumResponseTokens: 650)
         ).content
 
-        return JournalAnalysis(summary: summary.text, reflection: reflection.text, digest: digest.text)
+        return JournalAnalysis(summary: summary.text, reflection: reflection.text, digest: themes.text)
     }
 
     private func makeSummary(for journal: JournalEntry) async throws -> SummaryOutput {
@@ -164,8 +163,8 @@ private struct ReflectionOutput {
 
 @Generable
 @available(iOS 26.0, *)
-private struct DigestOutput {
-    @Guide(description: "A compact cumulative digest of recurring themes, preferences, emotions, and recent context.")
+private struct ThemeOutput {
+    @Guide(description: "The journal's main themes in one or two concise paragraphs.")
     var text: String
 }
 
