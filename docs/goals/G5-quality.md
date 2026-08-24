@@ -36,8 +36,9 @@ device after the core feature goals are complete.
   cancel action reachable. The main journal screen passed Xcode's hit-region,
   element-description, and trait audits. Custom alerts now move accessibility
   focus to their title and hide the obscured page from assistive technology.
-- An unsaved editor can no longer be dismissed interactively; the automated
-  swipe-dismiss regression test passed while preserving its draft text.
+- Create and edit sheets can no longer be dismissed interactively; the
+  automated swipe-dismiss regression test passed for an empty draft, an
+  unsaved draft, and an unchanged existing journal.
 - App launch measurements were `0.81–0.87 s` with a `0.85 s` average on the
   simulator. Scroll-deceleration measurements for 500 journals were
   `2.42–2.43 s`; this is the expected gesture-deceleration interval and showed
@@ -47,9 +48,9 @@ device after the core feature goals are complete.
   lookup and passed a 1,000-journal/1,000-insight stress fixture in `0.032 s`
   including test overhead.
 - Foundation Models generation remains a physical-device-only measurement.
-  The user's iPhone 17 runs produced usable per-journal and overall output in
-  the observed sub-minute flow. Both generation services now log precise total
-  duration under the `FoundationModels` OSLog category without logging journal
-  content; the next device run will provide exact seconds.
+  The user's iPhone 17 produced usable per-journal output in approximately
+  `4 s` during a normal manual run. Both generation services also log precise
+  total duration under the `FoundationModels` OSLog category without logging
+  journal content.
 - Instruments was not opened because the automated measurements exposed no
   unresolved launch, scrolling, persistence, or collection-scaling question.

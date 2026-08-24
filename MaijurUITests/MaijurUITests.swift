@@ -76,7 +76,7 @@ final class MaijurUITests: XCTestCase {
     }
 
     @MainActor
-    func testUnsavedJournalCannotBeDismissedBySwipe() throws {
+    func testCreateAndEditSheetsCannotBeDismissedBySwipe() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing"]
         app.launch()
@@ -84,6 +84,10 @@ final class MaijurUITests: XCTestCase {
         app.buttons["new-journal-button"].tap()
         let editor = app.textViews["journal-text-editor"]
         XCTAssertTrue(editor.waitForExistence(timeout: 3))
+
+        app.swipeDown()
+
+        XCTAssertTrue(editor.waitForExistence(timeout: 2))
         editor.tap()
         editor.typeText("This draft should remain on screen.")
 
@@ -91,6 +95,20 @@ final class MaijurUITests: XCTestCase {
 
         XCTAssertTrue(editor.waitForExistence(timeout: 2))
         XCTAssertEqual(editor.value as? String, "This draft should remain on screen.")
+
+        app.buttons["save-journal-button"].tap()
+        XCTAssertTrue(app.staticTexts["This draft should remain on screen."].waitForExistence(timeout: 3))
+        app.staticTexts["This draft should remain on screen."].tap()
+        app.buttons["edit-journal-button"].tap()
+
+        let editSaveButton = app.buttons["save-journal-button"]
+        XCTAssertTrue(editSaveButton.waitForExistence(timeout: 3))
+        XCTAssertFalse(editSaveButton.isEnabled)
+
+        app.swipeDown()
+
+        XCTAssertTrue(editSaveButton.waitForExistence(timeout: 2))
+        XCTAssertTrue(app.textViews["journal-text-editor"].exists)
     }
 
     @MainActor

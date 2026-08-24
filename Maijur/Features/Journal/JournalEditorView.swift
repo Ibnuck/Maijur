@@ -103,7 +103,7 @@ struct JournalEditorView: View {
             }
         }
         .accessibilityHidden(showsDiscardConfirmation)
-        .interactiveDismissDisabled(hasChanges)
+        .interactiveDismissDisabled()
         .overlay {
             if showsDiscardConfirmation {
                 MaiJurAlert(
