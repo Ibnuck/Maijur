@@ -8,7 +8,9 @@ struct JournalInsightView: View {
     @State private var generationError: String?
 
     private var snapshot: HistorySnapshot? {
-        store.history.first { $0.belongsToCurrentRevision(of: journal) }
+        store.history.first {
+            $0.belongsToCurrentRevision(of: journal) && $0.isCompatible(with: JournalAnalysisService.promptVersion)
+        }
     }
 
     var body: some View {
@@ -63,10 +65,7 @@ struct JournalInsightView: View {
         defer { isGenerating = false }
 
         do {
-            let analysis = try await JournalAnalysisService().generate(
-                for: journal,
-                overallContext: store.overallInsight?.compactContext
-            )
+            let analysis = try await JournalAnalysisService().generate(for: journal)
             store.saveHistory(
                 for: journal.id,
                 summary: analysis.summary,

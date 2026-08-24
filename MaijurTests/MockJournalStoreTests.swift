@@ -182,6 +182,25 @@ struct JournalStoreTests {
         #expect(store.pendingOverallInsights.map(\.id) == [secondInsight.id])
     }
 
+    @Test("Outdated generated insight is excluded until regenerated")
+    func outdatedInsightIsExcluded() {
+        let entry = journal(id: 1, timestamp: 1_700_000_000, text: "Source")
+        let outdated = HistorySnapshot(
+            id: UUID(),
+            sourceJournalID: entry.id,
+            sourceJournalDate: entry.date,
+            createdAt: entry.date,
+            summary: "Summary",
+            reflection: "Reflection",
+            digest: "Theme",
+            promptVersion: "journal-insights-v4"
+        )
+        let store = JournalStore(journals: [entry], history: [outdated])
+
+        #expect(store.currentJournalInsights.isEmpty)
+        #expect(store.pendingOverallInsights.isEmpty)
+    }
+
     private func journal(id: UInt8, timestamp: TimeInterval, text: String) -> JournalEntry {
         JournalEntry(
             id: UUID(uuid: (id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),

@@ -9,6 +9,7 @@ struct HistorySnapshot: Equatable, Identifiable {
     let reflection: String
     let digest: String
     let sourceContentHash: String
+    let promptVersion: String
 
     init(
         id: UUID,
@@ -18,7 +19,8 @@ struct HistorySnapshot: Equatable, Identifiable {
         summary: String,
         reflection: String,
         digest: String,
-        sourceContentHash: String = ""
+        sourceContentHash: String = "",
+        promptVersion: String = ""
     ) {
         self.id = id
         self.sourceJournalID = sourceJournalID
@@ -28,9 +30,14 @@ struct HistorySnapshot: Equatable, Identifiable {
         self.reflection = reflection
         self.digest = digest
         self.sourceContentHash = sourceContentHash
+        self.promptVersion = promptVersion
     }
 
     func belongsToCurrentRevision(of journal: JournalEntry) -> Bool {
         sourceJournalID == journal.id && (sourceContentHash.isEmpty || sourceContentHash == journal.contentHash)
+    }
+
+    func isCompatible(with currentPromptVersion: String) -> Bool {
+        promptVersion.isEmpty || promptVersion == currentPromptVersion
     }
 }

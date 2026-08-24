@@ -43,7 +43,8 @@ final class StoredOverallInsight {
             overview: overview,
             patterns: patterns,
             recentFocus: recentFocus,
-            coveredInsightIDs: coveredInsightIDs
+            coveredInsightIDs: coveredInsightIDs,
+            promptVersion: promptVersion
         )
     }
 }

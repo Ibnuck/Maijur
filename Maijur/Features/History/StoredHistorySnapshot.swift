@@ -53,7 +53,8 @@ final class StoredHistorySnapshot {
             summary: summary,
             reflection: reflection,
             digest: digest,
-            sourceContentHash: sourceContentHash
+            sourceContentHash: sourceContentHash,
+            promptVersion: promptVersion
         )
     }
 }

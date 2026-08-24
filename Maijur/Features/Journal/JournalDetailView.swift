@@ -36,7 +36,10 @@ struct JournalDetailView: View {
                 JournalInsightView(journal: journal, store: store)
             } label: {
                 Label(
-                    store.history.contains(where: { $0.belongsToCurrentRevision(of: journal) })
+                    store.history.contains(where: {
+                        $0.belongsToCurrentRevision(of: journal)
+                            && $0.isCompatible(with: JournalAnalysisService.promptVersion)
+                    })
                         ? "Buka Insight"
                         : "Buat Insight",
                     systemImage: "sparkles"

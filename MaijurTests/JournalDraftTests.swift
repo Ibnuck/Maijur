@@ -100,3 +100,60 @@ struct OverallInsightPlannerTests {
         #expect(batches.flatMap { $0 }.map(\.sourceJournalDate) == snapshots.reversed().map(\.sourceJournalDate))
     }
 }
+
+@Suite("Reflection perspective")
+struct ReflectionPerspectiveTests {
+    @Test("Second-person reflection is accepted")
+    func acceptsSecondPerson() {
+        #expect(!ReflectionPerspective.usesFirstPerson("You may be noticing what this connection means to you."))
+    }
+
+    @Test("First-person reflection is rejected")
+    func rejectsFirstPerson() {
+        #expect(ReflectionPerspective.usesFirstPerson("I enjoyed the date and I am looking forward to another one."))
+        #expect(ReflectionPerspective.usesFirstPerson("This made me reconsider my expectations."))
+    }
+}
+
+@Suite("Overall insight quality")
+struct OverallInsightQualityTests {
+    @Test("Patterns cannot repeat the overview")
+    func rejectsRepeatedOverview() {
+        #expect(OverallInsightQuality.needsRevision(
+            overview: "You are exploring changing romantic connections.",
+            patterns: ["You are exploring changing romantic connections."],
+            recentFocus: "You had dinner with Alisa.",
+            previousRecentFocus: nil
+        ))
+    }
+
+    @Test("Patterns must remain concise")
+    func rejectsParagraphPattern() {
+        #expect(OverallInsightQuality.needsRevision(
+            overview: "Your recent entries describe two different connections.",
+            patterns: ["You repeatedly write long narrative paragraphs that describe every event instead of naming one recurring pattern across dated insights."],
+            recentFocus: "You had dinner with Alisa.",
+            previousRecentFocus: nil
+        ))
+    }
+
+    @Test("Recent focus must change when new evidence arrives")
+    func rejectsUnchangedRecentFocus() {
+        #expect(OverallInsightQuality.needsRevision(
+            overview: "Your recent entries describe two different connections.",
+            patterns: ["Seeking closeness"],
+            recentFocus: "You went to the cinema with Grand Cheval.",
+            previousRecentFocus: "You went to the cinema with Grand Cheval."
+        ))
+    }
+
+    @Test("Distinct fields with a new focus are accepted")
+    func acceptsDistinctUpdatedOutput() {
+        #expect(!OverallInsightQuality.needsRevision(
+            overview: "Your recent entries show your attention moving between two connections.",
+            patterns: ["Attraction and uncertainty", "Seeking closeness"],
+            recentFocus: "You had dinner with Alisa and wondered whether it was a date.",
+            previousRecentFocus: "You went to the cinema with Grand Cheval."
+        ))
+    }
+}

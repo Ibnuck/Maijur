@@ -59,6 +59,7 @@ final class JournalStore {
             .filter { snapshot in
                 guard let journal = journals.first(where: { $0.id == snapshot.sourceJournalID }),
                       snapshot.belongsToCurrentRevision(of: journal),
+                      snapshot.isCompatible(with: JournalAnalysisService.promptVersion),
                       seenJournalIDs.insert(snapshot.sourceJournalID).inserted
                 else { return false }
                 return true
@@ -177,7 +178,8 @@ final class JournalStore {
                 summary: summary,
                 reflection: reflection,
                 digest: digest,
-                sourceContentHash: journal.contentHash
+                sourceContentHash: journal.contentHash,
+                promptVersion: promptVersion
             )
             history.insert(snapshot, at: 0)
             return snapshot
@@ -226,7 +228,8 @@ final class JournalStore {
             overview: overview,
             patterns: patterns,
             recentFocus: recentFocus,
-            coveredInsightIDs: coveredInsightIDs
+            coveredInsightIDs: coveredInsightIDs,
+            promptVersion: promptVersion
         )
 
         guard let modelContext else {
@@ -273,7 +276,10 @@ final class JournalStore {
             )
             journals = try modelContext.fetch(journalDescriptor).map(\.entry)
             history = try modelContext.fetch(historyDescriptor).map(\.snapshot)
-            overallInsight = try modelContext.fetch(overallDescriptor).first?.snapshot
+            let storedOverallInsight = try modelContext.fetch(overallDescriptor).first?.snapshot
+            overallInsight = storedOverallInsight?.isCompatible(with: OverallInsightService.promptVersion) == true
+                ? storedOverallInsight
+                : nil
             journalsPhase = .loaded
             historyPhase = .loaded
             persistenceError = nil
