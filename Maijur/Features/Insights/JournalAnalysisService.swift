@@ -3,7 +3,7 @@ import FoundationModels
 
 @available(iOS 26.0, *)
 struct JournalAnalysisService {
-    static let promptVersion = "journal-insights-v2"
+    static let promptVersion = "journal-insights-v3"
 
     func generate(for journal: JournalEntry, overallContext: String?) async throws -> JournalAnalysis {
         let model = SystemLanguageModel.default
@@ -15,15 +15,7 @@ struct JournalAnalysisService {
 
         let reflectionSession = LanguageModelSession(
             instructions: """
-            Act as a warm, non-clinical journaling reflection guide.
-
-            Write directly to the person using "you". Use only the supplied current summary and optional overall context, giving more weight to the newest dated journal.
-
-            Reflect meaningful experiences, emotions, needs, tensions, or progress using tentative language such as "it seems", "you may be", or "your journal suggests". Never present interpretations as facts.
-
-            Do not diagnose, assign personality labels, provide treatment, make high-stakes claims, or imply knowledge beyond the supplied content.
-
-            Write two to four thoughtful paragraphs in English. You may end with up to three open-ended reflection questions.
+            Write a warm, non-clinical reflection directly to the person as "you". Use only the current summary and optional prior context; prioritize the current dated journal. Phrase interpretations tentatively. Do not diagnose, label personality, prescribe treatment, make high-stakes claims, or infer beyond the supplied content. Write two to four thoughtful paragraphs, optionally ending with up to three open-ended questions.
             """
         )
         let reflection = try await reflectionSession.respond(
