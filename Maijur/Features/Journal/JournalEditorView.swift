@@ -124,7 +124,13 @@ struct JournalEditorView: View {
     }
 
     private func requestDismissal() {
-        hasChanges ? (showsDiscardConfirmation = true) : dismiss()
+        guard hasChanges else {
+            dismiss()
+            return
+        }
+
+        isWritingFocused = false
+        showsDiscardConfirmation = true
     }
 
     private func save() {
