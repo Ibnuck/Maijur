@@ -164,6 +164,10 @@ final class JournalStore {
         summary: String,
         reflection: String,
         digest: String,
+        processingSummary: String? = nil,
+        processingDigest: String? = nil,
+        sourceLanguageCode: String = "en",
+        displayLanguageCode: String = "en",
         coveredJournalIDs: [UUID] = [],
         promptVersion: String = "",
         modelVersion: String = ""
@@ -181,6 +185,10 @@ final class JournalStore {
                 summary: summary,
                 reflection: reflection,
                 digest: digest,
+                processingSummary: processingSummary,
+                processingDigest: processingDigest,
+                sourceLanguageCode: sourceLanguageCode,
+                displayLanguageCode: displayLanguageCode,
                 sourceContentHash: journal.contentHash,
                 promptVersion: promptVersion
             )
@@ -200,6 +208,10 @@ final class JournalStore {
                 summary: summary,
                 reflection: reflection,
                 digest: digest,
+                processingSummary: processingSummary,
+                processingDigest: processingDigest,
+                sourceLanguageCode: sourceLanguageCode,
+                displayLanguageCode: displayLanguageCode,
                 coveredJournalIDs: coveredJournalIDs,
                 promptVersion: promptVersion,
                 modelVersion: modelVersion
@@ -219,6 +231,10 @@ final class JournalStore {
         overview: String,
         patterns: String,
         recentFocus: String,
+        processingOverview: String? = nil,
+        processingPatterns: String? = nil,
+        processingRecentFocus: String? = nil,
+        displayLanguageCode: String = "id",
         coveredInsightIDs: [UUID],
         promptVersion: String = "",
         modelVersion: String = ""
@@ -231,6 +247,10 @@ final class JournalStore {
             overview: overview,
             patterns: patterns,
             recentFocus: recentFocus,
+            processingOverview: processingOverview,
+            processingPatterns: processingPatterns,
+            processingRecentFocus: processingRecentFocus,
+            displayLanguageCode: displayLanguageCode,
             coveredInsightIDs: coveredInsightIDs,
             promptVersion: promptVersion
         )
@@ -247,6 +267,10 @@ final class JournalStore {
                 overview: overview,
                 patterns: patterns,
                 recentFocus: recentFocus,
+                processingOverview: processingOverview,
+                processingPatterns: processingPatterns,
+                processingRecentFocus: processingRecentFocus,
+                displayLanguageCode: displayLanguageCode,
                 coveredInsightIDs: coveredInsightIDs,
                 promptVersion: promptVersion,
                 modelVersion: modelVersion

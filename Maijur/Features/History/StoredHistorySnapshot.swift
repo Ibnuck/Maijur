@@ -12,6 +12,10 @@ final class StoredHistorySnapshot {
     var summary: String
     var reflection: String
     var digest: String
+    var processingSummary: String = ""
+    var processingDigest: String = ""
+    var sourceLanguageCode: String = "en"
+    var displayLanguageCode: String = "en"
     var coveredJournalIDs: [UUID]
     var promptVersion: String
     var modelVersion: String
@@ -26,6 +30,10 @@ final class StoredHistorySnapshot {
         summary: String,
         reflection: String,
         digest: String,
+        processingSummary: String? = nil,
+        processingDigest: String? = nil,
+        sourceLanguageCode: String = "en",
+        displayLanguageCode: String = "en",
         coveredJournalIDs: [UUID] = [],
         promptVersion: String = "",
         modelVersion: String = ""
@@ -39,6 +47,10 @@ final class StoredHistorySnapshot {
         self.summary = summary
         self.reflection = reflection
         self.digest = digest
+        self.processingSummary = processingSummary ?? summary
+        self.processingDigest = processingDigest ?? digest
+        self.sourceLanguageCode = sourceLanguageCode
+        self.displayLanguageCode = displayLanguageCode
         self.coveredJournalIDs = coveredJournalIDs
         self.promptVersion = promptVersion
         self.modelVersion = modelVersion
@@ -53,6 +65,10 @@ final class StoredHistorySnapshot {
             summary: summary,
             reflection: reflection,
             digest: digest,
+            processingSummary: processingSummary.isEmpty ? summary : processingSummary,
+            processingDigest: processingDigest.isEmpty ? digest : processingDigest,
+            sourceLanguageCode: sourceLanguageCode,
+            displayLanguageCode: displayLanguageCode,
             sourceContentHash: sourceContentHash,
             promptVersion: promptVersion
         )

@@ -1,4 +1,5 @@
 import SwiftUI
+import Translation
 
 struct MaiJurAlert: View {
     let symbol: String
@@ -21,34 +22,8 @@ struct MaiJurAlert: View {
                 .accessibilityHidden(true)
 
             VStack(spacing: 0) {
-                ScrollView {
-                    VStack(spacing: 16) {
-                        Image(systemName: symbol)
-                            .font(.system(size: 23, weight: .semibold))
-                            .foregroundStyle(tint)
-                            .frame(width: 58, height: 58)
-                            .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                            .accessibilityHidden(true)
-
-                        VStack(spacing: 6) {
-                            Text(title)
-                                .font(.title3.weight(.bold))
-                                .multilineTextAlignment(.center)
-                                .accessibilityAddTraits(.isHeader)
-                                .accessibilityFocused($isTitleFocused)
-
-                            Text(message)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-
-                        if let journal {
-                            JournalAlertPreview(journal: journal)
-                        }
-                    }
+                alertContent
                     .padding(22)
-                }
 
                 Divider()
 
@@ -63,7 +38,8 @@ struct MaiJurAlert: View {
             .shadow(color: .black.opacity(0.20), radius: 30, y: 16)
             .padding(.horizontal, 30)
             .padding(.vertical, 24)
-            .frame(maxWidth: 430, maxHeight: 700)
+            .frame(maxWidth: 430)
+            .fixedSize(horizontal: false, vertical: true)
         }
         .transaction { transaction in
             transaction.animation = nil
@@ -80,6 +56,47 @@ struct MaiJurAlert: View {
         .onAppear {
             isTitleFocused = true
         }
+    }
+
+    @ViewBuilder
+    private var alertContent: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            ScrollView {
+                alertContentStack
+            }
+            .frame(maxHeight: 360)
+        } else {
+            alertContentStack
+        }
+    }
+
+    private var alertContentStack: some View {
+        VStack(spacing: 16) {
+            Image(systemName: symbol)
+                .font(.system(size: 23, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 58, height: 58)
+                .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .accessibilityHidden(true)
+
+            VStack(spacing: 6) {
+                Text(title)
+                    .font(.title3.weight(.bold))
+                    .multilineTextAlignment(.center)
+                    .accessibilityAddTraits(.isHeader)
+                    .accessibilityFocused($isTitleFocused)
+
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            if let journal {
+                JournalAlertPreview(journal: journal)
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
@@ -213,6 +230,12 @@ enum InsightAlertCopy {
         }
         if let error = error as? OverallInsightError {
             return error.localizedDescription
+        }
+        if let error = error as? InsightTranslationError {
+            return error.localizedDescription
+        }
+        if error is TranslationError {
+            return "Bahasa ini belum siap diterjemahkan di iPhone. Pastikan paket bahasanya tersedia, lalu coba lagi."
         }
         return "Model belum menghasilkan insight yang dapat digunakan. Jurnalmu tetap aman; silakan coba lagi."
     }

@@ -1,4 +1,5 @@
 import SwiftUI
+import Translation
 
 struct JournalInsightView: View {
     let journal: JournalEntry
@@ -6,6 +7,10 @@ struct JournalInsightView: View {
 
     @State private var isGenerating = false
     @State private var generationError: String?
+    @State private var inputTranslationConfiguration: TranslationSession.Configuration?
+    @State private var outputTranslationConfiguration: TranslationSession.Configuration?
+    @State private var inputTranslationJournal: JournalEntry?
+    @State private var outputTranslationJob: JournalOutputTranslationJob?
 
     private var snapshot: HistorySnapshot? {
         store.history.first {
@@ -71,27 +76,137 @@ struct JournalInsightView: View {
                 )
             }
         }
+        .translationTask(inputTranslationConfiguration) { session in
+            await continueAfterInputTranslation(using: session)
+        }
+        .translationTask(outputTranslationConfiguration) { session in
+            await finishOutputTranslation(using: session)
+        }
     }
 
     private func generateInsights() async {
         isGenerating = true
-        defer { isGenerating = false }
+        let plan = InsightLanguagePipeline.journalPlan(for: journal.text)
+
+        if plan.needsInputTranslation {
+            inputTranslationJournal = journal
+            inputTranslationConfiguration = plan.inputTranslationConfiguration
+            return
+        }
+
+        guard let sourceLanguage = plan.sourceLanguage else {
+            finish(with: JournalAnalysisError.languageDetectionFailed)
+            return
+        }
 
         do {
             let analysis = try await JournalAnalysisService().generate(for: journal)
-            store.saveHistory(
-                for: journal.id,
-                summary: analysis.summary,
-                reflection: analysis.reflection,
-                digest: analysis.digest,
-                coveredJournalIDs: [journal.id],
-                promptVersion: JournalAnalysisService.promptVersion,
-                modelVersion: "Apple on-device"
+            if InsightLanguagePipeline.isEnglish(sourceLanguage) {
+                save(analysis, sourceLanguage: sourceLanguage)
+            } else {
+                outputTranslationJob = JournalOutputTranslationJob(
+                    analysis: analysis,
+                    sourceLanguage: sourceLanguage
+                )
+                outputTranslationConfiguration = TranslationSession.Configuration(
+                    source: InsightLanguagePipeline.processingLanguage,
+                    target: sourceLanguage,
+                    preferredStrategy: .highFidelity
+                )
+            }
+        } catch {
+            finish(with: error)
+        }
+    }
+
+    private func continueAfterInputTranslation(using session: TranslationSession) async {
+        guard let inputTranslationJournal else { return }
+        self.inputTranslationJournal = nil
+
+        do {
+            let translation = try await session.translate(inputTranslationJournal.text)
+            let analysis = try await JournalAnalysisService().generate(
+                for: inputTranslationJournal,
+                processingText: translation.targetText
+            )
+
+            if InsightLanguagePipeline.isEnglish(translation.sourceLanguage) {
+                save(analysis, sourceLanguage: translation.sourceLanguage)
+                return
+            }
+
+            let reverseSession = TranslationSession(
+                installedSource: InsightLanguagePipeline.processingLanguage,
+                target: translation.sourceLanguage,
+                preferredStrategy: .highFidelity
+            )
+            let displayAnalysis = try await InsightTranslation.journalAnalysis(
+                from: analysis,
+                using: reverseSession
+            )
+            save(displayAnalysis, processingAnalysis: analysis, sourceLanguage: translation.sourceLanguage)
+        } catch {
+            finish(with: error)
+        }
+    }
+
+    private func finishOutputTranslation(using session: TranslationSession) async {
+        guard let outputTranslationJob else { return }
+        self.outputTranslationJob = nil
+
+        do {
+            let displayAnalysis = try await InsightTranslation.journalAnalysis(
+                from: outputTranslationJob.analysis,
+                using: session
+            )
+            save(
+                displayAnalysis,
+                processingAnalysis: outputTranslationJob.analysis,
+                sourceLanguage: outputTranslationJob.sourceLanguage
             )
         } catch {
+            finish(with: error)
+        }
+    }
+
+    private func save(
+        _ displayAnalysis: JournalAnalysis,
+        processingAnalysis: JournalAnalysis? = nil,
+        sourceLanguage: Locale.Language
+    ) {
+        let processingAnalysis = processingAnalysis ?? displayAnalysis
+        store.saveHistory(
+            for: journal.id,
+            summary: displayAnalysis.summary,
+            reflection: displayAnalysis.reflection,
+            digest: displayAnalysis.digest,
+            processingSummary: processingAnalysis.summary,
+            processingDigest: processingAnalysis.digest,
+            sourceLanguageCode: InsightLanguagePipeline.languageCode(for: sourceLanguage),
+            displayLanguageCode: InsightLanguagePipeline.languageCode(for: sourceLanguage),
+            coveredJournalIDs: [journal.id],
+            promptVersion: JournalAnalysisService.promptVersion,
+            modelVersion: "Apple on-device + Translation"
+        )
+        finish()
+    }
+
+    private func finish(with error: Error? = nil) {
+        inputTranslationConfiguration = nil
+        outputTranslationConfiguration = nil
+        inputTranslationJournal = nil
+        outputTranslationJob = nil
+        isGenerating = false
+
+        if let error {
             generationError = InsightAlertCopy.message(for: error)
         }
     }
+}
+
+private struct JournalOutputTranslationJob {
+    let analysis: JournalAnalysis
+    let sourceLanguage: Locale.Language
 }
 
 private struct InsightHero: View {
