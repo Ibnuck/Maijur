@@ -1,4 +1,5 @@
 import SwiftUI
+import Translation
 
 struct MaiJurAlert: View {
     let symbol: String
@@ -229,6 +230,12 @@ enum InsightAlertCopy {
         }
         if let error = error as? OverallInsightError {
             return error.localizedDescription
+        }
+        if let error = error as? InsightTranslationError {
+            return error.localizedDescription
+        }
+        if error is TranslationError {
+            return "Bahasa ini belum siap diterjemahkan di iPhone. Pastikan paket bahasanya tersedia, lalu coba lagi."
         }
         return "Model belum menghasilkan insight yang dapat digunakan. Jurnalmu tetap aman; silakan coba lagi."
     }

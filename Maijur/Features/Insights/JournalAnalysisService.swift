@@ -4,13 +4,13 @@ import OSLog
 
 @available(iOS 26.0, *)
 struct JournalAnalysisService {
-    static let promptVersion = "journal-insights-v5"
+    static let promptVersion = "journal-insights-v6"
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "MaiJur",
         category: "FoundationModels"
     )
 
-    func generate(for journal: JournalEntry) async throws -> JournalAnalysis {
+    func generate(for journal: JournalEntry, processingText: String? = nil) async throws -> JournalAnalysis {
         let model = SystemLanguageModel.default
         guard model.isAvailable else {
             throw JournalAnalysisError.modelUnavailable
@@ -22,7 +22,7 @@ struct JournalAnalysisService {
             Self.logger.info("Journal insight request ended after \(duration, privacy: .public) seconds")
         }
 
-        let summary = try await makeSummary(for: journal)
+        let summary = try await makeSummary(for: journal, processingText: processingText ?? journal.text)
 
         let reflection = try await makeReflection(from: summary.text, date: journal.date)
 
@@ -79,8 +79,8 @@ struct JournalAnalysisService {
         return corrected
     }
 
-    private func makeSummary(for journal: JournalEntry) async throws -> SummaryOutput {
-        let chunks = JournalAnalysisInput.chunks(from: journal.text)
+    private func makeSummary(for journal: JournalEntry, processingText: String) async throws -> SummaryOutput {
+        let chunks = JournalAnalysisInput.chunks(from: processingText)
         if chunks.count == 1, let journalText = chunks.first {
             return try await summarizeJournalText(journalText, date: journal.date, outputTokens: 800)
         }
@@ -221,6 +221,7 @@ enum ReflectionPerspective {
 enum JournalAnalysisError: LocalizedError {
     case modelUnavailable
     case invalidReflectionPerspective
+    case languageDetectionFailed
 
     var errorDescription: String? {
         switch self {
@@ -228,6 +229,8 @@ enum JournalAnalysisError: LocalizedError {
             "Apple Intelligence belum siap di perangkat ini. Kamu tetap bisa menulis jurnal secara lokal."
         case .invalidReflectionPerspective:
             "Refleksi belum dapat ditulis dengan sudut pandang yang tepat. Silakan coba lagi."
+        case .languageDetectionFailed:
+            "Bahasa jurnal belum dapat dikenali. Coba tambahkan sedikit detail lalu buat insight lagi."
         }
     }
 }

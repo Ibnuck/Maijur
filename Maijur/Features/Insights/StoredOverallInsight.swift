@@ -9,6 +9,10 @@ final class StoredOverallInsight {
     var overview: String
     var patterns: String
     var recentFocus: String
+    var processingOverview: String = ""
+    var processingPatterns: String = ""
+    var processingRecentFocus: String = ""
+    var displayLanguageCode: String = "id"
     var coveredInsightIDs: [UUID]
     var promptVersion: String
     var modelVersion: String
@@ -20,6 +24,10 @@ final class StoredOverallInsight {
         overview: String,
         patterns: String,
         recentFocus: String,
+        processingOverview: String? = nil,
+        processingPatterns: String? = nil,
+        processingRecentFocus: String? = nil,
+        displayLanguageCode: String = "id",
         coveredInsightIDs: [UUID],
         promptVersion: String = "",
         modelVersion: String = ""
@@ -30,6 +38,10 @@ final class StoredOverallInsight {
         self.overview = overview
         self.patterns = patterns
         self.recentFocus = recentFocus
+        self.processingOverview = processingOverview ?? overview
+        self.processingPatterns = processingPatterns ?? patterns
+        self.processingRecentFocus = processingRecentFocus ?? recentFocus
+        self.displayLanguageCode = displayLanguageCode
         self.coveredInsightIDs = coveredInsightIDs
         self.promptVersion = promptVersion
         self.modelVersion = modelVersion
@@ -43,6 +55,10 @@ final class StoredOverallInsight {
             overview: overview,
             patterns: patterns,
             recentFocus: recentFocus,
+            processingOverview: processingOverview.isEmpty ? overview : processingOverview,
+            processingPatterns: processingPatterns.isEmpty ? patterns : processingPatterns,
+            processingRecentFocus: processingRecentFocus.isEmpty ? recentFocus : processingRecentFocus,
+            displayLanguageCode: displayLanguageCode,
             coveredInsightIDs: coveredInsightIDs,
             promptVersion: promptVersion
         )

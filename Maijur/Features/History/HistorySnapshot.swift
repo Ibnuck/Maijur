@@ -8,6 +8,10 @@ struct HistorySnapshot: Equatable, Identifiable {
     let summary: String
     let reflection: String
     let digest: String
+    let processingSummary: String
+    let processingDigest: String
+    let sourceLanguageCode: String
+    let displayLanguageCode: String
     let sourceContentHash: String
     let promptVersion: String
 
@@ -19,6 +23,10 @@ struct HistorySnapshot: Equatable, Identifiable {
         summary: String,
         reflection: String,
         digest: String,
+        processingSummary: String? = nil,
+        processingDigest: String? = nil,
+        sourceLanguageCode: String = "en",
+        displayLanguageCode: String = "en",
         sourceContentHash: String = "",
         promptVersion: String = ""
     ) {
@@ -29,6 +37,10 @@ struct HistorySnapshot: Equatable, Identifiable {
         self.summary = summary
         self.reflection = reflection
         self.digest = digest
+        self.processingSummary = processingSummary ?? summary
+        self.processingDigest = processingDigest ?? digest
+        self.sourceLanguageCode = sourceLanguageCode
+        self.displayLanguageCode = displayLanguageCode
         self.sourceContentHash = sourceContentHash
         self.promptVersion = promptVersion
     }
