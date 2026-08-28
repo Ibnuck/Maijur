@@ -82,7 +82,7 @@ enum InsightTranslation {
     ) async throws -> OverallInsightGeneration {
         let responses = try await session.translations(from: [
             .init(sourceText: insight.overview, clientIdentifier: "overview"),
-            .init(sourceText: insight.reflection, clientIdentifier: "reflection"),
+            .init(sourceText: insight.patterns, clientIdentifier: "patterns"),
             .init(sourceText: insight.recentFocus, clientIdentifier: "recentFocus")
         ])
         let translated = Dictionary(uniqueKeysWithValues: responses.compactMap { response in
@@ -90,13 +90,13 @@ enum InsightTranslation {
         })
 
         guard let overview = translated["overview"],
-              let reflection = translated["reflection"],
+              let patterns = translated["patterns"],
               let recentFocus = translated["recentFocus"]
         else { throw InsightTranslationError.incompleteTranslation }
 
         return OverallInsightGeneration(
             overview: overview,
-            reflection: reflection,
+            patterns: patterns,
             recentFocus: recentFocus,
             coveredInsightIDs: insight.coveredInsightIDs
         )

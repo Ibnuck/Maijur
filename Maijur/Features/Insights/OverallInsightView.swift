@@ -108,10 +108,10 @@ struct OverallInsightView: View {
             )
             store.saveOverallInsight(
                 overview: displayInsight.overview,
-                patterns: displayInsight.reflection,
+                patterns: displayInsight.patterns,
                 recentFocus: displayInsight.recentFocus,
                 processingOverview: processingInsight.overview,
-                processingPatterns: processingInsight.reflection,
+                processingPatterns: processingInsight.patterns,
                 processingRecentFocus: processingInsight.recentFocus,
                 displayLanguageCode: InsightLanguagePipeline.languageCode(
                     for: InsightLanguagePipeline.overallDisplayLanguage
@@ -277,7 +277,7 @@ private struct OverallInsightCards: View {
             )
             InsightContentCard(
                 icon: "point.3.connected.trianglepath.dotted",
-                title: "Ruang Refleksi",
+                title: "Pola yang Berkembang",
                 text: insight.patterns
             )
             InsightContentCard(
