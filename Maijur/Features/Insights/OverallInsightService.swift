@@ -15,7 +15,7 @@ enum OverallInsightPlanner {
 
 @available(iOS 26.0, *)
 struct OverallInsightService {
-    static let promptVersion = "overall-insight-v7"
+    static let promptVersion = "overall-insight-v6"
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "MaiJur",
         category: "FoundationModels"
