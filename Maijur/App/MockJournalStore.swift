@@ -26,7 +26,10 @@ final class JournalStore {
         modelContext = nil
         self.journals = journals.sorted { $0.date > $1.date }
         self.history = history
-        self.overallInsight = overallInsight
+        self.overallInsight = overallInsight?.isCompatible(with: OverallInsightService.promptVersion) == true
+            && overallInsight?.hasValidLanguageContract() == true
+            ? overallInsight
+            : nil
         self.journalsPhase = journalsPhase
         self.historyPhase = historyPhase
         self.insightLoadingJournalIDs = insightLoadingJournalIDs
@@ -63,6 +66,7 @@ final class JournalStore {
                 guard let journal = journalsByID[snapshot.sourceJournalID],
                       snapshot.belongsToCurrentRevision(of: journal),
                       snapshot.isCompatible(with: JournalAnalysisService.promptVersion),
+                      snapshot.hasValidLanguageContract(),
                       seenJournalIDs.insert(snapshot.sourceJournalID).inserted
                 else { return false }
                 return true
@@ -164,15 +168,31 @@ final class JournalStore {
         summary: String,
         reflection: String,
         digest: String,
-        processingSummary: String? = nil,
-        processingDigest: String? = nil,
+        processingSummary: String,
+        processingDigest: String,
         sourceLanguageCode: String = "en",
-        displayLanguageCode: String = "en",
+        displayLanguageCode: String,
         coveredJournalIDs: [UUID] = [],
-        promptVersion: String = "",
+        promptVersion: String,
         modelVersion: String = ""
     ) -> HistorySnapshot? {
         guard let journal = journals.first(where: { $0.id == journalID }) else { return nil }
+        guard Locale.Language(identifier: displayLanguageCode)
+            .isEquivalent(to: InsightLanguagePipeline.displayLanguage),
+              InsightLanguagePipeline.isValidJournalDisplay(
+                summary: summary,
+                reflection: reflection,
+                digest: digest
+              ),
+              InsightLanguagePipeline.isValidJournalProcessing(
+                summary: processingSummary,
+                digest: processingDigest
+              )
+        else {
+            persistenceError = "Insight harus lengkap dalam bahasa Indonesia sebelum dapat disimpan."
+            return nil
+        }
+
         guard let modelContext else {
             let removedIDs = history.filter { $0.sourceJournalID == journalID }.map(\.id)
             history.removeAll { $0.sourceJournalID == journalID }
@@ -231,14 +251,31 @@ final class JournalStore {
         overview: String,
         patterns: String,
         recentFocus: String,
-        processingOverview: String? = nil,
-        processingPatterns: String? = nil,
-        processingRecentFocus: String? = nil,
-        displayLanguageCode: String = "id",
+        processingOverview: String,
+        processingPatterns: String,
+        processingRecentFocus: String,
+        displayLanguageCode: String,
         coveredInsightIDs: [UUID],
-        promptVersion: String = "",
+        promptVersion: String,
         modelVersion: String = ""
     ) -> OverallInsightSnapshot? {
+        guard Locale.Language(identifier: displayLanguageCode)
+            .isEquivalent(to: InsightLanguagePipeline.displayLanguage),
+              InsightLanguagePipeline.isValidOverallDisplay(
+                overview: overview,
+                patterns: patterns,
+                recentFocus: recentFocus
+              ),
+              InsightLanguagePipeline.isValidOverallProcessing(
+                overview: processingOverview,
+                patterns: processingPatterns,
+                recentFocus: processingRecentFocus
+              )
+        else {
+            persistenceError = "Insight keseluruhan harus lengkap dalam bahasa Indonesia sebelum dapat disimpan."
+            return nil
+        }
+
         let createdAt = overallInsight?.createdAt ?? .now
         let snapshot = OverallInsightSnapshot(
             id: UUID(),
@@ -302,9 +339,15 @@ final class JournalStore {
                 sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
             )
             journals = try modelContext.fetch(journalDescriptor).map(\.entry)
-            history = try modelContext.fetch(historyDescriptor).map(\.snapshot)
+            history = try modelContext.fetch(historyDescriptor)
+                .map(\.snapshot)
+                .filter {
+                    $0.isCompatible(with: JournalAnalysisService.promptVersion)
+                        && $0.hasValidLanguageContract()
+                }
             let storedOverallInsight = try modelContext.fetch(overallDescriptor).first?.snapshot
             overallInsight = storedOverallInsight?.isCompatible(with: OverallInsightService.promptVersion) == true
+                && storedOverallInsight?.hasValidLanguageContract() == true
                 ? storedOverallInsight
                 : nil
             journalsPhase = .loaded
@@ -351,8 +394,10 @@ final class JournalStore {
               !Set(overallInsight.coveredInsightIDs).isDisjoint(with: insightIDs)
         else { return }
 
-        self.overallInsight = nil
-        guard let modelContext else { return }
+        guard let modelContext else {
+            self.overallInsight = nil
+            return
+        }
         if let records = try? modelContext.fetch(FetchDescriptor<StoredOverallInsight>()) {
             records.forEach(modelContext.delete)
         }

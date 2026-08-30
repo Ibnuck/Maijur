@@ -24,7 +24,58 @@ struct MaijurTests {
         #expect(!first.history.isEmpty)
         #expect(first.journals == second.journals)
         #expect(first.history == second.history)
+        #expect(first.history.allSatisfy {
+            $0.isDisplayed(in: InsightLanguagePipeline.displayLanguage)
+        })
+        #expect(first.history.allSatisfy { !$0.processingSummary.isEmpty })
         #expect(first.insightLoadingJournalIDs.isEmpty)
+    }
+
+    @Test("Insight pipeline processes in English and displays in Indonesian")
+    func insightLanguageContract() {
+        let englishPlan = InsightLanguagePipeline.journalPlan(
+            for: "Today I walked home after the rain and felt calm while thinking about my week."
+        )
+        let indonesianPlan = InsightLanguagePipeline.journalPlan(
+            for: "Hari ini aku berjalan pulang setelah hujan dan merasa tenang saat memikirkan kegiatanku minggu ini."
+        )
+
+        #expect(InsightLanguagePipeline.processingLanguage.minimalIdentifier == "en")
+        #expect(InsightLanguagePipeline.displayLanguage.minimalIdentifier == "id")
+        #expect(englishPlan.sourceLanguage?.isEquivalent(to: Locale.Language(identifier: "en")) == true)
+        #expect(englishPlan.needsInputTranslation == false)
+        #expect(indonesianPlan.sourceLanguage?.isEquivalent(to: Locale.Language(identifier: "id")) == true)
+        #expect(indonesianPlan.needsInputTranslation == true)
+        #expect(InsightLanguagePipeline.isValidJournalDisplay(
+            summary: "Hari ini terasa lebih ringan setelah kamu menyelesaikan pekerjaan.",
+            reflection: "Kamu memberi dirimu waktu untuk memahami pengalaman tersebut.",
+            digest: "• Ketenangan\n• Penyelesaian pekerjaan"
+        ))
+        #expect(!InsightLanguagePipeline.isValidJournalDisplay(
+            summary: "Today felt calmer after you finished the work.",
+            reflection: "You gave yourself time to understand the experience.",
+            digest: "• Calm\n• Finishing work"
+        ))
+        #expect(!InsightLanguagePipeline.isValidJournalDisplay(
+            summary: "Hari ini terasa lebih ringan.",
+            reflection: " ",
+            digest: "• Ketenangan"
+        ))
+        #expect(!InsightLanguagePipeline.isValidJournalDisplay(
+            summary: "Today felt calmer after completing the work.",
+            reflection: "Kamu memberi dirimu waktu yang cukup panjang untuk memahami pengalaman dan perasaanmu hari ini.",
+            digest: "• Ketenangan\n• Penyelesaian pekerjaan"
+        ))
+        #expect(InsightLanguagePipeline.isValidJournalProcessing(
+            summary: "Today felt calmer after you finished the work.",
+            reflection: "You gave yourself time to understand the experience.",
+            digest: "• Calmness\n• Finishing work"
+        ))
+        #expect(!InsightLanguagePipeline.isValidJournalProcessing(
+            summary: "Hari ini terasa lebih ringan setelah pekerjaan selesai.",
+            reflection: "Kamu memberi dirimu waktu untuk memahami pengalaman itu.",
+            digest: "• Ketenangan\n• Penyelesaian pekerjaan"
+        ))
     }
 
     @Test("Empty fixture has loaded empty lists")

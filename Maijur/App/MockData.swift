@@ -23,7 +23,12 @@ enum MockData {
                 overview: "Akhir-akhir ini, momen yang paling bermakna muncul ketika ada ruang untuk melambat dan terhubung dengan orang lain.",
                 patterns: "Ketenangan dan hubungan yang sudah lama terjalin berulang kali memberi rasa pulih dan nyaman.",
                 recentFocus: "Perhatian terbaru lebih banyak tertuju pada menikmati lingkungan sekitar dan memberi ruang bagi pikiran.",
-                coveredInsightIDs: history.map(\.id)
+                processingOverview: "Recently, the most meaningful moments appear when there is room to slow down and connect with other people.",
+                processingPatterns: "• Restorative quiet\n• Longstanding connections",
+                processingRecentFocus: "The newest entry focuses on noticing the surroundings and making room to think.",
+                displayLanguageCode: "id",
+                coveredInsightIDs: history.map(\.id),
+                promptVersion: OverallInsightService.promptVersion
             )
         )
     }
@@ -80,18 +85,30 @@ enum MockData {
             sourceJournalID: journals[0].id,
             sourceJournalDate: journals[0].date,
             createdAt: Date(timeIntervalSince1970: 1_787_432_400),
-            summary: "A reflective walk home created space to slow down and notice the city.",
-            reflection: "You seem restored by unplanned moments that leave room for attention.",
-            digest: "Recent entries return to friendship, quiet routines, and making space to notice everyday life."
+            summary: "Perjalanan pulang yang reflektif memberi ruang untuk melambat dan memperhatikan suasana kota.",
+            reflection: "Kamu tampaknya merasa lebih pulih ketika momen yang tidak direncanakan memberi ruang untuk memperhatikan sekitar.",
+            digest: "• Ketenangan setelah hujan\n• Ruang untuk berpikir",
+            processingSummary: "A reflective walk home created space to slow down and notice the city.",
+            processingDigest: "• Quiet after rain\n• Space to think",
+            sourceLanguageCode: "en",
+            displayLanguageCode: "id",
+            sourceContentHash: journals[0].contentHash,
+            promptVersion: JournalAnalysisService.promptVersion
         ),
         HistorySnapshot(
             id: UUID(uuidString: "20000000-0000-0000-0000-000000000002")!,
             sourceJournalID: journals[1].id,
             sourceJournalDate: journals[1].date,
             createdAt: Date(timeIntervalSince1970: 1_787_173_200),
-            summary: "Reconnecting with a friend felt natural and grounding.",
-            reflection: "Longstanding relationships continue to offer you a sense of ease.",
-            digest: "Connection and calm have shaped the most meaningful moments this week."
+            summary: "Berjumpa kembali dengan seorang teman terasa alami dan menenangkan.",
+            reflection: "Hubungan yang sudah lama terjalin tampaknya terus memberimu rasa nyaman dan ringan.",
+            digest: "• Persahabatan lama\n• Rasa nyaman",
+            processingSummary: "Reconnecting with a friend felt natural and grounding.",
+            processingDigest: "• Longstanding friendship\n• Ease and grounding",
+            sourceLanguageCode: "en",
+            displayLanguageCode: "id",
+            sourceContentHash: journals[1].contentHash,
+            promptVersion: JournalAnalysisService.promptVersion
         )
     ]
 }

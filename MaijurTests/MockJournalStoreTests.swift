@@ -118,19 +118,28 @@ struct JournalStoreTests {
         let snapshot = try #require(
             store.saveHistory(
                 for: journal.id,
-                summary: "Summary",
-                reflection: "Reflection",
-                digest: "Digest"
+                summary: "Hari ini berjalan dengan baik dan terasa lebih tenang.",
+                reflection: "Kamu mulai memahami hal yang paling penting dalam pengalaman ini.",
+                digest: "• Ketenangan\n• Pemahaman diri",
+                processingSummary: "Today went well and felt calmer.",
+                processingDigest: "• Calmness\n• Self understanding",
+                displayLanguageCode: "id",
+                promptVersion: JournalAnalysisService.promptVersion
             )
         )
         #expect(store.history == [snapshot])
 
         let overall = try #require(
             store.saveOverallInsight(
-                overview: "Overview",
-                patterns: "Patterns",
-                recentFocus: "Recent focus",
-                coveredInsightIDs: [snapshot.id]
+                overview: "Kamu sedang membangun kebiasaan untuk memahami pengalaman sehari-hari.",
+                patterns: "• Ketenangan\n• Pemahaman diri",
+                recentFocus: "Perhatian terbarumu tertuju pada rasa tenang setelah melewati hari ini.",
+                processingOverview: "You are building a habit of understanding everyday experiences.",
+                processingPatterns: "• Calmness\n• Self understanding",
+                processingRecentFocus: "Your latest focus is the calm you felt after moving through today.",
+                displayLanguageCode: "id",
+                coveredInsightIDs: [snapshot.id],
+                promptVersion: OverallInsightService.promptVersion
             )
         )
         let reloadedStore = JournalStore(modelContext: container.mainContext)
@@ -152,18 +161,26 @@ struct JournalStoreTests {
             sourceJournalID: first.id,
             sourceJournalDate: first.date,
             createdAt: first.date,
-            summary: "First summary",
-            reflection: "First reflection",
-            digest: "First theme"
+            summary: "Jurnal pertama menceritakan hari yang terasa lebih tenang.",
+            reflection: "Kamu mulai memberi ruang untuk memahami pengalaman pertamamu.",
+            digest: "• Ketenangan\n• Pemahaman diri",
+            processingSummary: "The first journal describes a day that felt calmer.",
+            processingDigest: "• Calmness\n• Self understanding",
+            displayLanguageCode: "id",
+            promptVersion: JournalAnalysisService.promptVersion
         )
         let secondInsight = HistorySnapshot(
             id: UUID(uuidString: "30000000-0000-0000-0000-000000000002")!,
             sourceJournalID: second.id,
             sourceJournalDate: second.date,
             createdAt: second.date,
-            summary: "Second summary",
-            reflection: "Second reflection",
-            digest: "Second theme"
+            summary: "Jurnal kedua menunjukkan perhatian pada kegiatan yang baru selesai.",
+            reflection: "Kamu melihat kemajuan setelah menyelesaikan kegiatan tersebut.",
+            digest: "• Kemajuan\n• Penyelesaian kegiatan",
+            processingSummary: "The second journal focuses on a recently completed activity.",
+            processingDigest: "• Progress\n• Completing an activity",
+            displayLanguageCode: "id",
+            promptVersion: JournalAnalysisService.promptVersion
         )
         let store = JournalStore(
             journals: [first, second],
@@ -172,10 +189,15 @@ struct JournalStoreTests {
                 id: UUID(),
                 createdAt: first.date,
                 updatedAt: first.date,
-                overview: "Overview",
-                patterns: "Patterns",
-                recentFocus: "Recent",
-                coveredInsightIDs: [firstInsight.id]
+                overview: "Kamu sedang memahami perubahan dalam kegiatan sehari-hari.",
+                patterns: "• Pemahaman diri",
+                recentFocus: "Perhatian terbarumu tertuju pada kegiatan yang baru selesai.",
+                processingOverview: "You are understanding changes in everyday activities.",
+                processingPatterns: "• Self understanding",
+                processingRecentFocus: "Your latest focus is the recently completed activity.",
+                displayLanguageCode: "id",
+                coveredInsightIDs: [firstInsight.id],
+                promptVersion: OverallInsightService.promptVersion
             )
         )
 
@@ -201,6 +223,155 @@ struct JournalStoreTests {
         #expect(store.pendingOverallInsights.isEmpty)
     }
 
+    @Test("Persistence rejects mislabeled or incomplete Indonesian output without replacing valid insight")
+    func persistenceRejectsInvalidIndonesianOutput() throws {
+        let entry = journal(
+            id: 1,
+            timestamp: 1_700_000_000,
+            text: "Hari ini aku belajar memahami perasaanku dengan lebih baik."
+        )
+        let store = JournalStore(journals: [entry])
+        let valid = try #require(
+            store.saveHistory(
+                for: entry.id,
+                summary: "Hari ini kamu belajar memahami perasaanmu dengan lebih baik.",
+                reflection: "Kamu memberi ruang untuk mengenali emosi tanpa terburu-buru menilainya.",
+                digest: "• Pemahaman diri\n• Kesadaran emosi",
+                processingSummary: "Today you learned to understand your feelings more clearly.",
+                processingDigest: "• Self understanding\n• Emotional awareness",
+                displayLanguageCode: "id",
+                promptVersion: JournalAnalysisService.promptVersion
+            )
+        )
+
+        let mislabeledEnglish = store.saveHistory(
+            for: entry.id,
+            summary: "Today was a calm and thoughtful day.",
+            reflection: "You gave yourself time to understand your emotions.",
+            digest: "• Self awareness\n• Calm",
+            processingSummary: "Today was a calm and thoughtful day.",
+            processingDigest: "• Self awareness\n• Calmness",
+            displayLanguageCode: "id",
+            promptVersion: JournalAnalysisService.promptVersion
+        )
+        let incomplete = store.saveHistory(
+            for: entry.id,
+            summary: "Hari ini terasa lebih tenang.",
+            reflection: " ",
+            digest: "• Ketenangan",
+            processingSummary: "Today felt calmer.",
+            processingDigest: "• Calmness",
+            displayLanguageCode: "id",
+            promptVersion: JournalAnalysisService.promptVersion
+        )
+        let validOverall = try #require(
+            store.saveOverallInsight(
+                overview: "Kamu sedang belajar memahami pengalaman sehari-hari dengan lebih jernih.",
+                patterns: "• Pemahaman diri\n• Kesadaran emosi",
+                recentFocus: "Perhatian terbarumu tertuju pada cara mengenali perasaan dengan lebih baik.",
+                processingOverview: "You are learning to understand everyday experiences more clearly.",
+                processingPatterns: "• Self understanding\n• Emotional awareness",
+                processingRecentFocus: "Your latest focus is recognizing feelings more clearly.",
+                displayLanguageCode: "id",
+                coveredInsightIDs: [valid.id],
+                promptVersion: OverallInsightService.promptVersion
+            )
+        )
+        let invalidOverall = store.saveOverallInsight(
+            overview: "This is still an English overview.",
+            patterns: "• Self awareness",
+            recentFocus: "Your recent focus is understanding emotions.",
+            processingOverview: "This is still an English overview.",
+            processingPatterns: "• Self awareness",
+            processingRecentFocus: "Your recent focus is understanding emotions.",
+            displayLanguageCode: "id",
+            coveredInsightIDs: [valid.id],
+            promptVersion: OverallInsightService.promptVersion
+        )
+
+        #expect(mislabeledEnglish == nil)
+        #expect(incomplete == nil)
+        #expect(store.history == [valid])
+        #expect(invalidOverall == nil)
+        #expect(store.overallInsight == validOverall)
+    }
+
+    @Test("Non-Indonesian insight is excluded until regenerated")
+    func nonIndonesianInsightIsExcluded() {
+        let entry = journal(id: 1, timestamp: 1_700_000_000, text: "Source")
+        let englishInsight = HistorySnapshot(
+            id: UUID(),
+            sourceJournalID: entry.id,
+            sourceJournalDate: entry.date,
+            createdAt: entry.date,
+            summary: "English summary",
+            reflection: "English reflection",
+            digest: "English theme",
+            displayLanguageCode: "en",
+            sourceContentHash: entry.contentHash,
+            promptVersion: JournalAnalysisService.promptVersion
+        )
+        let store = JournalStore(journals: [entry], history: [englishInsight])
+
+        #expect(store.currentJournalInsights.isEmpty)
+        #expect(store.pendingOverallInsights.isEmpty)
+    }
+
+    @Test("Mislabeled and unversioned snapshots are excluded")
+    func malformedSnapshotsAreExcluded() {
+        let entry = journal(id: 1, timestamp: 1_700_000_000, text: "Source")
+        let mislabeled = HistorySnapshot(
+            id: UUID(),
+            sourceJournalID: entry.id,
+            sourceJournalDate: entry.date,
+            createdAt: entry.date,
+            summary: "This visible summary is still English.",
+            reflection: "You can still read this reflection in English.",
+            digest: "• English theme",
+            processingSummary: "This processing summary is English.",
+            processingDigest: "• English theme",
+            displayLanguageCode: "id",
+            sourceContentHash: entry.contentHash,
+            promptVersion: JournalAnalysisService.promptVersion
+        )
+        let unversioned = HistorySnapshot(
+            id: UUID(),
+            sourceJournalID: entry.id,
+            sourceJournalDate: entry.date,
+            createdAt: entry.date,
+            summary: "Jurnal ini menceritakan hari yang terasa lebih tenang.",
+            reflection: "Kamu mulai memberi ruang untuk memahami pengalaman hari ini.",
+            digest: "• Ketenangan\n• Pemahaman diri",
+            processingSummary: "This journal describes a day that felt calmer.",
+            processingDigest: "• Calmness\n• Self understanding",
+            displayLanguageCode: "id",
+            sourceContentHash: entry.contentHash
+        )
+        let malformedOverall = OverallInsightSnapshot(
+            id: UUID(),
+            createdAt: entry.date,
+            updatedAt: entry.date,
+            overview: "This overview is mislabeled as Indonesian.",
+            patterns: "• English pattern",
+            recentFocus: "This recent focus is still English.",
+            processingOverview: "This overview is English.",
+            processingPatterns: "• English pattern",
+            processingRecentFocus: "This recent focus is English.",
+            displayLanguageCode: "id",
+            coveredInsightIDs: [],
+            promptVersion: OverallInsightService.promptVersion
+        )
+
+        let store = JournalStore(
+            journals: [entry],
+            history: [mislabeled, unversioned],
+            overallInsight: malformedOverall
+        )
+
+        #expect(store.currentJournalInsights.isEmpty)
+        #expect(store.overallInsight == nil)
+    }
+
     @Test("Editing a journal invalidates its insight and any overall synthesis that covered it")
     func editingJournalInvalidatesDerivedInsight() throws {
         let entry = journal(id: 1, timestamp: 1_700_000_000, text: "Before")
@@ -209,9 +380,12 @@ struct JournalStoreTests {
             sourceJournalID: entry.id,
             sourceJournalDate: entry.date,
             createdAt: entry.date,
-            summary: "Summary",
-            reflection: "Reflection",
-            digest: "Theme",
+            summary: "Jurnal ini menceritakan perubahan yang sedang kamu alami.",
+            reflection: "Kamu mulai memahami perubahan tersebut dengan lebih tenang.",
+            digest: "• Perubahan\n• Ketenangan",
+            processingSummary: "This journal describes a change you are experiencing.",
+            processingDigest: "• Change\n• Calmness",
+            displayLanguageCode: "id",
             sourceContentHash: entry.contentHash,
             promptVersion: JournalAnalysisService.promptVersion
         )
@@ -222,10 +396,15 @@ struct JournalStoreTests {
                 id: UUID(),
                 createdAt: entry.date,
                 updatedAt: entry.date,
-                overview: "Overview",
-                patterns: "Patterns",
-                recentFocus: "Recent",
-                coveredInsightIDs: [insight.id]
+                overview: "Kamu sedang memahami perubahan dalam pengalaman sehari-hari.",
+                patterns: "• Pemahaman diri",
+                recentFocus: "Perhatian terbarumu tertuju pada perubahan yang sedang berlangsung.",
+                processingOverview: "You are understanding changes in everyday experiences.",
+                processingPatterns: "• Self understanding",
+                processingRecentFocus: "Your latest focus is the change currently taking place.",
+                displayLanguageCode: "id",
+                coveredInsightIDs: [insight.id],
+                promptVersion: OverallInsightService.promptVersion
             )
         )
 
@@ -252,9 +431,12 @@ struct JournalStoreTests {
                 sourceJournalID: entry.id,
                 sourceJournalDate: entry.date,
                 createdAt: entry.date,
-                summary: "Summary",
-                reflection: "Reflection",
-                digest: "Theme",
+                summary: "Jurnal ini mencatat kegiatan dan perasaan pada hari tersebut.",
+                reflection: "Kamu memberi perhatian pada pengalaman yang terjadi hari itu.",
+                digest: "• Kegiatan harian\n• Kesadaran emosi",
+                processingSummary: "This journal records activities and feelings from that day.",
+                processingDigest: "• Daily activities\n• Emotional awareness",
+                displayLanguageCode: "id",
                 sourceContentHash: entry.contentHash,
                 promptVersion: JournalAnalysisService.promptVersion
             )

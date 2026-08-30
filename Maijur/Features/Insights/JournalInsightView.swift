@@ -14,7 +14,9 @@ struct JournalInsightView: View {
 
     private var snapshot: HistorySnapshot? {
         store.history.first {
-            $0.belongsToCurrentRevision(of: journal) && $0.isCompatible(with: JournalAnalysisService.promptVersion)
+            $0.belongsToCurrentRevision(of: journal)
+                && $0.isCompatible(with: JournalAnalysisService.promptVersion)
+                && $0.hasValidLanguageContract()
         }
     }
 
@@ -101,19 +103,7 @@ struct JournalInsightView: View {
 
         do {
             let analysis = try await JournalAnalysisService().generate(for: journal)
-            if InsightLanguagePipeline.isEnglish(sourceLanguage) {
-                save(analysis, sourceLanguage: sourceLanguage)
-            } else {
-                outputTranslationJob = JournalOutputTranslationJob(
-                    analysis: analysis,
-                    sourceLanguage: sourceLanguage
-                )
-                outputTranslationConfiguration = TranslationSession.Configuration(
-                    source: InsightLanguagePipeline.processingLanguage,
-                    target: sourceLanguage,
-                    preferredStrategy: .highFidelity
-                )
-            }
+            requestOutputTranslation(analysis, sourceLanguage: sourceLanguage)
         } catch {
             finish(with: error)
         }
@@ -125,29 +115,41 @@ struct JournalInsightView: View {
 
         do {
             let translation = try await session.translate(inputTranslationJournal.text)
+            guard InsightLanguagePipeline.isValidTranslatedInput(translation.targetText) else {
+                throw InsightTranslationError.invalidProcessingLanguage
+            }
             let analysis = try await JournalAnalysisService().generate(
                 for: inputTranslationJournal,
                 processingText: translation.targetText
             )
-
-            if InsightLanguagePipeline.isEnglish(translation.sourceLanguage) {
-                save(analysis, sourceLanguage: translation.sourceLanguage)
-                return
-            }
-
-            let reverseSession = TranslationSession(
-                installedSource: InsightLanguagePipeline.processingLanguage,
-                target: translation.sourceLanguage,
-                preferredStrategy: .highFidelity
-            )
-            let displayAnalysis = try await InsightTranslation.journalAnalysis(
-                from: analysis,
-                using: reverseSession
-            )
-            save(displayAnalysis, processingAnalysis: analysis, sourceLanguage: translation.sourceLanguage)
+            requestOutputTranslation(analysis, sourceLanguage: translation.sourceLanguage)
         } catch {
             finish(with: error)
         }
+    }
+
+    private func requestOutputTranslation(
+        _ analysis: JournalAnalysis,
+        sourceLanguage: Locale.Language
+    ) {
+        guard InsightLanguagePipeline.isValidJournalProcessing(
+            summary: analysis.summary,
+            reflection: analysis.reflection,
+            digest: analysis.digest
+        ) else {
+            finish(with: InsightTranslationError.invalidProcessingLanguage)
+            return
+        }
+
+        outputTranslationJob = JournalOutputTranslationJob(
+            analysis: analysis,
+            sourceLanguage: sourceLanguage
+        )
+        outputTranslationConfiguration = TranslationSession.Configuration(
+            source: InsightLanguagePipeline.processingLanguage,
+            target: InsightLanguagePipeline.displayLanguage,
+            preferredStrategy: .highFidelity
+        )
     }
 
     private func finishOutputTranslation(using session: TranslationSession) async {
@@ -183,7 +185,9 @@ struct JournalInsightView: View {
             processingSummary: processingAnalysis.summary,
             processingDigest: processingAnalysis.digest,
             sourceLanguageCode: InsightLanguagePipeline.languageCode(for: sourceLanguage),
-            displayLanguageCode: InsightLanguagePipeline.languageCode(for: sourceLanguage),
+            displayLanguageCode: InsightLanguagePipeline.languageCode(
+                for: InsightLanguagePipeline.displayLanguage
+            ),
             coveredJournalIDs: [journal.id],
             promptVersion: JournalAnalysisService.promptVersion,
             modelVersion: "Apple on-device + Translation"

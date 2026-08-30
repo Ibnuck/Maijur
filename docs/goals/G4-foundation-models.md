@@ -1,6 +1,6 @@
 # G4 — Foundation Models Generation
 
-**Status:** Complete for the current MVP scope
+**Status:** In review - Indonesian output device validation pending
 
 ## Objective
 
@@ -22,11 +22,14 @@ and incremental Overall Insight flows.
 - [x] Save only completed structured outputs as local insight snapshots.
 - [x] Avoid resending raw historical journals and previously covered insight
   IDs during Overall Insight updates.
-- [x] Validate the current English-output strategy on the target iPhone 17.
+- [x] Make English the internal processing language and Indonesian the required
+  display language for every newly generated insight.
+- [ ] Validate English, Indonesian, and one additional journal language on the
+  target iPhone 17, including the missing-language-pack failure path.
 
-Runtime token-usage instrumentation and broader language evaluation are G5
-validation work. They are not required to call the current MVP generation flow
-implemented.
+Runtime token-usage instrumentation remains a G5 validation item. The fixed
+Indonesian display contract requires a focused target-device check because the
+Translation framework session cannot be fully exercised by unit tests.
 
 ## Acceptance criteria
 
@@ -35,6 +38,8 @@ implemented.
 - Overall Insight is incremental and does not require raw historical journals.
 - Generated output is stored locally and visible from its journal or the
   Overall Insight entry point.
+- Every successfully stored user-visible insight field is Indonesian; English
+  is retained only in internal processing fields.
 - A model failure never deletes or corrupts the source journal.
 - Model availability and output quality are verified on the target device;
   quantitative token and performance measurement continues in G5.

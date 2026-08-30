@@ -43,6 +43,24 @@ struct OverallInsightSnapshot: Equatable, Identifiable {
     }
 
     func isCompatible(with currentPromptVersion: String) -> Bool {
-        promptVersion.isEmpty || promptVersion == currentPromptVersion
+        promptVersion == currentPromptVersion
+    }
+
+    func isDisplayed(in language: Locale.Language) -> Bool {
+        Locale.Language(identifier: displayLanguageCode).isEquivalent(to: language)
+    }
+
+    func hasValidLanguageContract() -> Bool {
+        isDisplayed(in: InsightLanguagePipeline.displayLanguage)
+            && InsightLanguagePipeline.isValidOverallDisplay(
+                overview: overview,
+                patterns: patterns,
+                recentFocus: recentFocus
+            )
+            && InsightLanguagePipeline.isValidOverallProcessing(
+                overview: processingOverview,
+                patterns: processingPatterns,
+                recentFocus: processingRecentFocus
+            )
     }
 }

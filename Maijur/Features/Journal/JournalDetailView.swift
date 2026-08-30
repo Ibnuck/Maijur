@@ -9,6 +9,7 @@ struct JournalDetailView: View {
         store.history.contains {
             $0.belongsToCurrentRevision(of: journal)
                 && $0.isCompatible(with: JournalAnalysisService.promptVersion)
+                && $0.hasValidLanguageContract()
         }
     }
 

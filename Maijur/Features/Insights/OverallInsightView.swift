@@ -87,7 +87,7 @@ struct OverallInsightView: View {
         pendingInsights = newInsights
         outputTranslationConfiguration = TranslationSession.Configuration(
             source: InsightLanguagePipeline.processingLanguage,
-            target: InsightLanguagePipeline.overallDisplayLanguage,
+            target: InsightLanguagePipeline.displayLanguage,
             preferredStrategy: .highFidelity
         )
     }
@@ -102,6 +102,13 @@ struct OverallInsightView: View {
                 previous: store.overallInsight,
                 newInsights: newInsights
             )
+            guard InsightLanguagePipeline.isValidOverallProcessing(
+                overview: processingInsight.overview,
+                patterns: processingInsight.patterns,
+                recentFocus: processingInsight.recentFocus
+            ) else {
+                throw InsightTranslationError.invalidProcessingLanguage
+            }
             let displayInsight = try await InsightTranslation.overallInsight(
                 from: processingInsight,
                 using: session
@@ -114,7 +121,7 @@ struct OverallInsightView: View {
                 processingPatterns: processingInsight.patterns,
                 processingRecentFocus: processingInsight.recentFocus,
                 displayLanguageCode: InsightLanguagePipeline.languageCode(
-                    for: InsightLanguagePipeline.overallDisplayLanguage
+                    for: InsightLanguagePipeline.displayLanguage
                 ),
                 coveredInsightIDs: processingInsight.coveredInsightIDs,
                 promptVersion: OverallInsightService.promptVersion,

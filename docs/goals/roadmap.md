@@ -1,6 +1,8 @@
 # MaiJur Goal Roadmap
 
-The initial personal-project MVP goals G0–G5 are implemented and verified.
+The initial personal-project MVP is implemented. A focused G4 follow-up that
+guarantees Indonesian insight output is in review pending target-device
+validation.
 
 | ID | Goal | Priority | Status | Depends on |
 |---|---|---:|---|---|
@@ -8,7 +10,7 @@ The initial personal-project MVP goals G0–G5 are implemented and verified.
 | G1 | Native UI foundation | P0 | Complete | G0 |
 | G2 | Local journaling CRUD | P0 | Complete | G1 |
 | G3 | Per-journal insight snapshots | P1 | Complete | G2 |
-| G4 | Foundation Models generation | P1 | Complete | G3 |
+| G4 | Foundation Models generation | P1 | In review | G3 |
 | G5 | Quality, accessibility, and performance | P1 | Complete | G4 |
 
 ## Status definitions

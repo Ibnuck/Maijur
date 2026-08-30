@@ -68,9 +68,19 @@ constraints belong in instructions, not inside untrusted journal text.
 - Keep the source journal even if generation fails.
 - Present a recoverable error without exposing or copying private journal text
   into the error message.
-- The current generated content strategy is English while the surrounding UI
-  is Indonesian. Any future Indonesian generation requires separate quality
-  validation and must not be inferred from the UI locale.
+- English is the internal processing language. Non-English journal input is
+  translated to English before generation, and every completed per-journal or
+  Overall Insight output is translated to Indonesian before its user-visible
+  fields are saved.
+- If the Indonesian translation is unavailable or incomplete, save no partial
+  insight. Keep the source journal and any previously valid insight unchanged.
+- Require every field to be nonempty, then validate the complete internal
+  payload as English and the complete user-visible payload as Indonesian before
+  persistence. Substantive prose fields are also checked independently; short
+  theme phrases are checked with their payload because isolated phrase
+  detection is unreliable.
+- Stored English processing fields may be reused by incremental Overall Insight,
+  but user-visible insight fields must have `displayLanguageCode == "id"`.
 
 ## Out of scope
 

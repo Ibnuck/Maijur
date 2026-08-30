@@ -50,6 +50,23 @@ struct HistorySnapshot: Equatable, Identifiable {
     }
 
     func isCompatible(with currentPromptVersion: String) -> Bool {
-        promptVersion.isEmpty || promptVersion == currentPromptVersion
+        promptVersion == currentPromptVersion
+    }
+
+    func isDisplayed(in language: Locale.Language) -> Bool {
+        Locale.Language(identifier: displayLanguageCode).isEquivalent(to: language)
+    }
+
+    func hasValidLanguageContract() -> Bool {
+        isDisplayed(in: InsightLanguagePipeline.displayLanguage)
+            && InsightLanguagePipeline.isValidJournalDisplay(
+                summary: summary,
+                reflection: reflection,
+                digest: digest
+            )
+            && InsightLanguagePipeline.isValidJournalProcessing(
+                summary: processingSummary,
+                digest: processingDigest
+            )
     }
 }
