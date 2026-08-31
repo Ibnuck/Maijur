@@ -19,6 +19,8 @@ and incremental Overall Insight flows.
   paragraph-aware chunking path for oversized legacy input.
 - [x] Add model-unavailable, generation-failure, invalid-perspective, and
   malformed-output handling.
+- [x] Reject clearly insufficient insight input before generation and present
+  actionable alerts for model, safety, translation, and persistence failures.
 - [x] Save only completed structured outputs as local insight snapshots.
 - [x] Avoid resending raw historical journals and previously covered insight
   IDs during Overall Insight updates.

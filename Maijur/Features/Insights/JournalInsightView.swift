@@ -88,6 +88,14 @@ struct JournalInsightView: View {
 
     private func generateInsights() async {
         isGenerating = true
+
+        do {
+            try InsightInputValidator.validate(journal.text)
+        } catch {
+            finish(with: error)
+            return
+        }
+
         let plan = InsightLanguagePipeline.journalPlan(for: journal.text)
 
         if plan.needsInputTranslation {
@@ -177,7 +185,7 @@ struct JournalInsightView: View {
         sourceLanguage: Locale.Language
     ) {
         let processingAnalysis = processingAnalysis ?? displayAnalysis
-        store.saveHistory(
+        guard store.saveHistory(
             for: journal.id,
             summary: displayAnalysis.summary,
             reflection: displayAnalysis.reflection,
@@ -191,7 +199,10 @@ struct JournalInsightView: View {
             coveredJournalIDs: [journal.id],
             promptVersion: JournalAnalysisService.promptVersion,
             modelVersion: "Apple on-device + Translation"
-        )
+        ) != nil else {
+            finish(with: JournalAnalysisError.persistenceFailed)
+            return
+        }
         finish()
     }
 

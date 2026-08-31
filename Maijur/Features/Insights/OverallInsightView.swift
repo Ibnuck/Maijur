@@ -113,7 +113,7 @@ struct OverallInsightView: View {
                 from: processingInsight,
                 using: session
             )
-            store.saveOverallInsight(
+            guard store.saveOverallInsight(
                 overview: displayInsight.overview,
                 patterns: displayInsight.patterns,
                 recentFocus: displayInsight.recentFocus,
@@ -126,7 +126,9 @@ struct OverallInsightView: View {
                 coveredInsightIDs: processingInsight.coveredInsightIDs,
                 promptVersion: OverallInsightService.promptVersion,
                 modelVersion: "Apple on-device + Translation"
-            )
+            ) != nil else {
+                throw JournalAnalysisError.persistenceFailed
+            }
         } catch {
             generationError = InsightAlertCopy.message(for: error)
         }

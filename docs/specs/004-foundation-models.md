@@ -68,6 +68,13 @@ constraints belong in instructions, not inside untrusted journal text.
 - Keep the source journal even if generation fails.
 - Present a recoverable error without exposing or copying private journal text
   into the error message.
+- Keep journal saving independent from insight eligibility. Before starting a
+  model request, reject clearly insufficient insight input with an actionable
+  message that asks for more story, feeling, or event context.
+- Map model availability, guardrail/refusal, rate limiting, concurrent request,
+  malformed structured output, context, translation-pack, language, and local
+  persistence failures to distinct user-facing recovery messages. Do not expose
+  framework error names or private prompt content.
 - English is the internal processing language. Non-English journal input is
   translated to English before generation, and every completed per-journal or
   Overall Insight output is translated to Indonesian before its user-visible

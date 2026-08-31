@@ -1,5 +1,6 @@
 import Foundation
 import FoundationModels
+import NaturalLanguage
 import OSLog
 
 @available(iOS 26.0, *)
@@ -11,10 +12,8 @@ struct JournalAnalysisService {
     )
 
     func generate(for journal: JournalEntry, processingText: String? = nil) async throws -> JournalAnalysis {
-        let model = SystemLanguageModel.default
-        guard model.isAvailable else {
-            throw JournalAnalysisError.modelUnavailable
-        }
+        try InsightInputValidator.validate(journal.text)
+        try InsightModelAvailability.requireAvailable()
 
         let startedAt = Date()
         defer {
@@ -178,6 +177,45 @@ enum JournalAnalysisInput {
     }
 }
 
+enum InsightInputValidator {
+    static let minimumMeaningfulWordCount = 4
+
+    static func validate(_ text: String) throws {
+        let tokenizer = NLTokenizer(unit: .word)
+        tokenizer.string = text
+        var meaningfulWordCount = 0
+
+        tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { range, _ in
+            if text[range].contains(where: { $0.isLetter || $0.isNumber }) {
+                meaningfulWordCount += 1
+            }
+            return meaningfulWordCount < minimumMeaningfulWordCount
+        }
+
+        guard meaningfulWordCount >= minimumMeaningfulWordCount else {
+            throw JournalAnalysisError.insufficientContent
+        }
+    }
+}
+
+@available(iOS 26.0, *)
+enum InsightModelAvailability {
+    static func requireAvailable(_ model: SystemLanguageModel = .default) throws {
+        switch model.availability {
+        case .available:
+            return
+        case .unavailable(.deviceNotEligible):
+            throw JournalAnalysisError.deviceNotEligible
+        case .unavailable(.appleIntelligenceNotEnabled):
+            throw JournalAnalysisError.appleIntelligenceNotEnabled
+        case .unavailable(.modelNotReady):
+            throw JournalAnalysisError.modelNotReady
+        @unknown default:
+            throw JournalAnalysisError.modelUnavailable
+        }
+    }
+}
+
 @Generable
 @available(iOS 26.0, *)
 private struct SummaryOutput {
@@ -219,18 +257,33 @@ enum ReflectionPerspective {
 
 @available(iOS 26.0, *)
 enum JournalAnalysisError: LocalizedError {
+    case insufficientContent
     case modelUnavailable
+    case deviceNotEligible
+    case appleIntelligenceNotEnabled
+    case modelNotReady
     case invalidReflectionPerspective
     case languageDetectionFailed
+    case persistenceFailed
 
     var errorDescription: String? {
         switch self {
+        case .insufficientContent:
+            "Isi jurnal masih terlalu singkat untuk dibuatkan insight. Tambahkan sedikit cerita, perasaan, atau kejadian yang kamu alami."
         case .modelUnavailable:
             "Apple Intelligence belum siap di perangkat ini. Kamu tetap bisa menulis jurnal secara lokal."
+        case .deviceNotEligible:
+            "iPhone ini belum mendukung pembuatan insight dengan Apple Intelligence. Jurnalmu tetap dapat digunakan secara lokal."
+        case .appleIntelligenceNotEnabled:
+            "Apple Intelligence belum aktif. Aktifkan di Pengaturan untuk membuat insight."
+        case .modelNotReady:
+            "Model Apple Intelligence masih disiapkan di iPhone. Tunggu hingga selesai, lalu coba lagi."
         case .invalidReflectionPerspective:
             "Refleksi belum dapat ditulis dengan sudut pandang yang tepat. Silakan coba lagi."
         case .languageDetectionFailed:
             "Bahasa jurnal belum dapat dikenali. Coba tambahkan sedikit detail lalu buat insight lagi."
+        case .persistenceFailed:
+            "Insight sudah diproses, tetapi belum dapat disimpan. Insight sebelumnya dan jurnalmu tetap aman; silakan coba lagi."
         }
     }
 }

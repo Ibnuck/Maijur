@@ -25,9 +25,7 @@ struct OverallInsightService {
         previous: OverallInsightSnapshot?,
         newInsights: [HistorySnapshot]
     ) async throws -> OverallInsightGeneration {
-        guard SystemLanguageModel.default.isAvailable else {
-            throw JournalAnalysisError.modelUnavailable
-        }
+        try InsightModelAvailability.requireAvailable()
 
         let startedAt = Date()
         defer {

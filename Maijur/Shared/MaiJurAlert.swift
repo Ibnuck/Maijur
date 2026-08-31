@@ -1,3 +1,4 @@
+import FoundationModels
 import SwiftUI
 import Translation
 
@@ -234,9 +235,61 @@ enum InsightAlertCopy {
         if let error = error as? InsightTranslationError {
             return error.localizedDescription
         }
+        if let error = error as? LanguageModelSession.GenerationError {
+            return generationMessage(for: error)
+        }
         if error is TranslationError {
-            return "Bahasa ini belum siap diterjemahkan di iPhone. Pastikan paket bahasanya tersedia, lalu coba lagi."
+            return translationMessage(for: error)
+        }
+        if error is CancellationError {
+            return "Proses pembuatan insight dibatalkan. Silakan coba lagi."
         }
         return "Model belum menghasilkan insight yang dapat digunakan. Jurnalmu tetap aman; silakan coba lagi."
+    }
+
+    private static func generationMessage(
+        for error: LanguageModelSession.GenerationError
+    ) -> String {
+        switch error {
+        case .exceededContextWindowSize:
+            "Bahan insight terlalu panjang untuk diproses sekaligus. Jurnalmu tetap aman; coba ringkas isinya lalu buat insight lagi."
+        case .assetsUnavailable:
+            "Model Apple Intelligence belum siap di iPhone. Tunggu hingga proses penyiapan selesai, lalu coba lagi."
+        case .guardrailViolation, .refusal:
+            "Isi jurnal ini belum dapat diproses menjadi insight. Jurnalmu tetap aman dan tersimpan."
+        case .unsupportedGuide:
+            "Format insight belum didukung oleh model di iPhone ini. Coba lagi setelah perangkat diperbarui."
+        case .unsupportedLanguageOrLocale:
+            "Bahasa untuk memproses insight belum didukung di iPhone ini. Coba tambahkan detail dengan bahasa yang didukung."
+        case .decodingFailure:
+            "Model belum menghasilkan format insight yang sesuai. Silakan coba lagi."
+        case .rateLimited:
+            "Model sedang sibuk. Tunggu sebentar, lalu coba buat insight lagi."
+        case .concurrentRequests:
+            "Insight lain masih sedang diproses. Tunggu hingga selesai, lalu coba lagi."
+        @unknown default:
+            "Model belum menghasilkan insight yang dapat digunakan. Jurnalmu tetap aman; silakan coba lagi."
+        }
+    }
+
+    private static func translationMessage(for error: Error) -> String {
+        if TranslationError.notInstalled ~= error {
+            return "Paket bahasa yang diperlukan belum terpasang di iPhone. Pasang paket bahasanya, lalu coba lagi."
+        }
+        if TranslationError.unableToIdentifyLanguage ~= error {
+            return "Bahasa jurnal belum dapat dikenali. Coba tambahkan sedikit detail lalu buat insight lagi."
+        }
+        if TranslationError.nothingToTranslate ~= error {
+            return "Tidak ada isi jurnal yang dapat diterjemahkan. Tambahkan sedikit cerita lalu coba lagi."
+        }
+        if TranslationError.unsupportedSourceLanguage ~= error
+            || TranslationError.unsupportedTargetLanguage ~= error
+            || TranslationError.unsupportedLanguagePairing ~= error {
+            return "Pasangan bahasa ini belum didukung untuk membuat insight di iPhone."
+        }
+        if TranslationError.alreadyCancelled ~= error {
+            return "Proses penerjemahan dibatalkan. Silakan coba lagi."
+        }
+        return "Terjemahan belum dapat diselesaikan di iPhone. Jurnalmu tetap aman; silakan coba lagi."
     }
 }
