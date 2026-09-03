@@ -9,13 +9,19 @@ Overall Insight while preserving local-first journaling.
 
 Use separate sessions with one clear responsibility each:
 
-1. **Summary task** receives the current journal and its date. Long legacy input
+1. **Semantic readiness task** receives the English processing text and its
+   date before summary generation. It permits informal, profane, sensitive,
+   ordinary, and short-but-meaningful writing, classifies ready entries as
+   brief, standard, or rich, and stops generation only when the entry needs
+   more context or cannot be interpreted. This gate never blocks saving the
+   source journal.
+2. **Summary task** receives the current journal and its date. Long legacy input
    can be summarized in chunks and merged by a separate synthesis session.
-2. **Reflection task** receives the current summary and date. It addresses the
+3. **Reflection task** receives the current summary and date. It addresses the
    author only as `you`/`your`; a correction session repairs first-person output.
-3. **Theme task** receives the current summary and returns short noun phrases,
+4. **Theme task** receives the current summary and returns short noun phrases,
    not another reflection or narrative summary.
-4. **Overall Insight update** receives the previous Overall Insight plus at most
+5. **Overall Insight update** receives the previous Overall Insight plus at most
    three new dated per-journal insight snapshots. It never receives all raw
    historical journals.
 
@@ -71,10 +77,19 @@ constraints belong in instructions, not inside untrusted journal text.
 - Keep journal saving independent from insight eligibility. Before starting a
   model request, reject clearly insufficient insight input with an actionable
   message that asks for more story, feeling, or event context.
+- After language preparation and before summary generation, use a dedicated
+  semantic readiness session. Map `needsMoreContext` and `cannotInterpret` to
+  distinct, nonjudgmental recovery messages. Safety and policy violations remain
+  the Foundation Models guardrail's responsibility rather than this classifier's.
+- Adapt summary, reflection, theme count, and response budget to semantic depth.
+  A coherent simple event receives a concise grounded insight; it must not be
+  rejected merely because the author omitted feelings, lessons, or extra detail.
 - Map model availability, guardrail/refusal, rate limiting, concurrent request,
   malformed structured output, context, translation-pack, language, and local
   persistence failures to distinct user-facing recovery messages. Do not expose
-  framework error names or private prompt content.
+  framework error names or private prompt content. A guardrail violation or model
+  refusal uses a dedicated safety-styled alert so it cannot be confused with a
+  language or writing-quality error.
 - English is the internal processing language. Non-English journal input is
   translated to English before generation, and every completed per-journal or
   Overall Insight output is translated to Indonesian before its user-visible
@@ -88,6 +103,10 @@ constraints belong in instructions, not inside untrusted journal text.
   detection is unreliable.
 - Stored English processing fields may be reused by incremental Overall Insight,
   but user-visible insight fields must have `displayLanguageCode == "id"`.
+- Debug builds may print complete language-detection metadata, translation input
+  and output, generated structured fields, and pipeline errors to the Xcode
+  console for local diagnosis. Compile these traces out of Release builds;
+  journal and insight text must never be emitted by production logging.
 
 ## Out of scope
 

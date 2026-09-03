@@ -159,14 +159,39 @@ struct InsightErrorMessageTests {
         #expect(message.contains("Tambahkan sedikit cerita"))
     }
 
+    @Test("Semantic readiness asks for more personal context without judging the journal")
+    func semanticReadinessNeedsContextMessage() {
+        let message = InsightAlertCopy.message(
+            for: JournalAnalysisError.insightNeedsMoreContext
+        )
+
+        #expect(message.contains("sudah dapat dipahami"))
+        #expect(message.contains("Tambahkan apa yang terjadi"))
+        #expect(!message.localizedCaseInsensitiveContains("buruk"))
+    }
+
+    @Test("Uninterpretable journal receives a distinct recovery message")
+    func semanticReadinessCannotInterpretMessage() {
+        let message = InsightAlertCopy.message(
+            for: JournalAnalysisError.insightCannotInterpret
+        )
+
+        #expect(message.contains("belum dapat dipahami"))
+        #expect(message.contains("Periksa kembali"))
+    }
+
     @Test("Guardrail violation does not expose technical language")
     func guardrailMessage() {
         let context = LanguageModelSession.GenerationError.Context(debugDescription: "test")
         let error = LanguageModelSession.GenerationError.guardrailViolation(context)
         let message = InsightAlertCopy.message(for: error)
+        let presentation = InsightAlertCopy.presentation(for: error)
 
         #expect(message.contains("belum dapat diproses"))
+        #expect(message.contains("sistem keamanan Apple Intelligence"))
         #expect(!message.localizedCaseInsensitiveContains("guardrail"))
+        #expect(presentation.title == "Konten dibatasi")
+        #expect(presentation.symbol == "exclamationmark.shield.fill")
     }
 
     @Test("Rate limit asks the person to wait")

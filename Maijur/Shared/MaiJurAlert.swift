@@ -224,7 +224,37 @@ private struct JournalAlertPreview: View {
     }
 }
 
+struct InsightAlertPresentation {
+    let symbol: String
+    let tint: Color
+    let title: String
+    let message: String
+}
+
 enum InsightAlertCopy {
+    static func presentation(
+        for error: Error,
+        defaultTitle: String = "Insight belum dapat dibuat",
+        defaultSymbol: String = "sparkles"
+    ) -> InsightAlertPresentation {
+        if let error = error as? LanguageModelSession.GenerationError,
+           isSafetyRejection(error) {
+            return InsightAlertPresentation(
+                symbol: "exclamationmark.shield.fill",
+                tint: .orange,
+                title: "Konten dibatasi",
+                message: generationMessage(for: error)
+            )
+        }
+
+        return InsightAlertPresentation(
+            symbol: defaultSymbol,
+            tint: .indigo,
+            title: defaultTitle,
+            message: message(for: error)
+        )
+    }
+
     static func message(for error: Error) -> String {
         if let error = error as? JournalAnalysisError {
             return error.localizedDescription
@@ -256,7 +286,7 @@ enum InsightAlertCopy {
         case .assetsUnavailable:
             "Model Apple Intelligence belum siap di iPhone. Tunggu hingga proses penyiapan selesai, lalu coba lagi."
         case .guardrailViolation, .refusal:
-            "Isi jurnal ini belum dapat diproses menjadi insight. Jurnalmu tetap aman dan tersimpan."
+            "Isi jurnal ini belum dapat diproses karena dibatasi oleh sistem keamanan Apple Intelligence. Jurnalmu tetap aman dan tersimpan."
         case .unsupportedGuide:
             "Format insight belum didukung oleh model di iPhone ini. Coba lagi setelah perangkat diperbarui."
         case .unsupportedLanguageOrLocale:
@@ -269,6 +299,17 @@ enum InsightAlertCopy {
             "Insight lain masih sedang diproses. Tunggu hingga selesai, lalu coba lagi."
         @unknown default:
             "Model belum menghasilkan insight yang dapat digunakan. Jurnalmu tetap aman; silakan coba lagi."
+        }
+    }
+
+    private static func isSafetyRejection(
+        _ error: LanguageModelSession.GenerationError
+    ) -> Bool {
+        switch error {
+        case .guardrailViolation, .refusal:
+            true
+        default:
+            false
         }
     }
 

@@ -5,7 +5,8 @@ struct OverallInsightView: View {
     let store: JournalStore
 
     @State private var isGenerating = false
-    @State private var generationError: String?
+    @State private var generationAlert: InsightAlertPresentation?
+    @State private var generationAlertID = UUID()
     @State private var outputTranslationConfiguration: TranslationSession.Configuration?
     @State private var pendingInsights: [HistorySnapshot] = []
 
@@ -36,7 +37,7 @@ struct OverallInsightView: View {
                         ContentUnavailableView {
                             Label("Belum Ada Bahan Insight", systemImage: "sparkles.rectangle.stack")
                         } description: {
-                            Text("Buat insight dari detail jurnal terlebih dahulu. Jurnal tanpa insight akan dilewati.")
+                            Text("Buat insight dari jurnalmu terlebih dahulu. Jurnal tanpa insight akan dilewati.")
                         }
                         .padding(.vertical, 30)
                     } else {
@@ -54,24 +55,23 @@ struct OverallInsightView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .accessibilityHidden(generationError != nil)
+        .accessibilityHidden(generationAlert != nil)
         .navigationTitle("Insight Keseluruhan")
         .navigationBarTitleDisplayMode(.inline)
         .overlay {
-            if let generationError {
+            if let generationAlert {
                 MaiJurAlert(
-                    symbol: "sparkles.rectangle.stack",
-                    tint: .indigo,
-                    title: insight == nil
-                        ? "Insight belum dapat dibuat"
-                        : "Insight belum dapat diperbarui",
-                    message: generationError,
+                    symbol: generationAlert.symbol,
+                    tint: generationAlert.tint,
+                    title: generationAlert.title,
+                    message: generationAlert.message,
                     primaryTitle: "Tutup",
                     primaryRole: nil,
                     primaryAction: {
-                        self.generationError = nil
+                        self.generationAlert = nil
                     }
                 )
+                .id(generationAlertID)
             }
         }
         .translationTask(outputTranslationConfiguration) { session in
@@ -84,12 +84,13 @@ struct OverallInsightView: View {
         guard !newInsights.isEmpty else { return }
 
         isGenerating = true
+        generationAlert = nil
         pendingInsights = newInsights
-        outputTranslationConfiguration = TranslationSession.Configuration(
+        triggerOutputTranslation(with: TranslationSession.Configuration(
             source: InsightLanguagePipeline.processingLanguage,
             target: InsightLanguagePipeline.displayLanguage,
             preferredStrategy: .highFidelity
-        )
+        ))
     }
 
     private func generateAndTranslate(using session: TranslationSession) async {
@@ -130,11 +131,28 @@ struct OverallInsightView: View {
                 throw JournalAnalysisError.persistenceFailed
             }
         } catch {
-            generationError = InsightAlertCopy.message(for: error)
+            InsightDebugLog.error("Overall insight pipeline · Error", error)
+            generationAlertID = UUID()
+            generationAlert = InsightAlertCopy.presentation(
+                for: error,
+                defaultTitle: insight == nil
+                    ? "Insight belum dapat dibuat"
+                    : "Insight belum dapat diperbarui",
+                defaultSymbol: "sparkles.rectangle.stack"
+            )
         }
 
-        outputTranslationConfiguration = nil
         isGenerating = false
+    }
+
+    private func triggerOutputTranslation(
+        with configuration: TranslationSession.Configuration
+    ) {
+        if outputTranslationConfiguration == configuration {
+            outputTranslationConfiguration?.invalidate()
+        } else {
+            outputTranslationConfiguration = configuration
+        }
     }
 }
 
@@ -152,7 +170,7 @@ private struct OverallInsightHeader: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text("Cerita besarmu")
+                Text("Insight keseluruhan")
                     .font(.title3.weight(.bold))
 
                 if let updatedAt {
@@ -200,7 +218,7 @@ private struct OverallInsightAction: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(pendingCount == 1 ? "Ada 1 insight baru" : "Ada \(pendingCount) insight baru")
                                 .font(.subheadline.weight(.semibold))
-                            Text("Perbarui cerita besarmu")
+                            Text("Perbarui insight keseluruhan")
                                 .font(.caption)
                                 .opacity(0.84)
                         }
@@ -252,7 +270,7 @@ private struct OverallInsightLoadingView: View {
             ProgressView()
                 .controlSize(.large)
             VStack(spacing: 5) {
-                Text("Menghubungkan perjalananmu…")
+                Text("Menghubungkan insightmu…")
                     .font(.headline)
                 Text("Insight baru sedang dipadukan dengan gambaran yang sudah tersimpan.")
                     .font(.subheadline)
@@ -269,7 +287,7 @@ private struct OverallInsightLoadingView: View {
                 .stroke(Color.primary.opacity(0.06), lineWidth: 1)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Menghubungkan perjalananmu")
+        .accessibilityLabel("Menghubungkan insightmu")
         .accessibilityValue("Insight baru sedang dipadukan dengan gambaran yang sudah tersimpan.")
     }
 }

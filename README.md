@@ -56,7 +56,9 @@ analyzed again.
 
 All model processing is performed through Apple's on-device Foundation Models
 framework. Journal content is not sent to an application server or written to
-diagnostic logs.
+production diagnostic logs. Debug builds intentionally print complete local
+pipeline traces to the Xcode console for development; these traces are compiled
+out of Release builds.
 
 ## Requirements
 
@@ -85,7 +87,7 @@ Test Foundation Models output on a compatible physical device.
 - **Persistence:** SwiftData
 - **Generation:** Apple Foundation Models with guided `@Generable` output
 - **State:** Observation
-- **Diagnostics:** OSLog without journal content
+- **Diagnostics:** OSLog metadata and DEBUG-only full pipeline traces
 - **Dependencies:** Apple frameworks only
 
 Product requirements, architecture decisions, and completed goals live in

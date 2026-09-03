@@ -1,3 +1,4 @@
+import OSLog
 import SwiftUI
 import Translation
 
@@ -5,8 +6,14 @@ struct JournalInsightView: View {
     let journal: JournalEntry
     let store: JournalStore
 
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "MaiJur",
+        category: "LanguageDetection"
+    )
+
     @State private var isGenerating = false
-    @State private var generationError: String?
+    @State private var generationAlert: InsightAlertPresentation?
+    @State private var generationAlertID = UUID()
     @State private var inputTranslationConfiguration: TranslationSession.Configuration?
     @State private var outputTranslationConfiguration: TranslationSession.Configuration?
     @State private var inputTranslationJournal: JournalEntry?
@@ -43,7 +50,7 @@ struct JournalInsightView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .accessibilityHidden(generationError != nil)
+        .accessibilityHidden(generationAlert != nil)
         .navigationTitle("Insight")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
@@ -64,18 +71,19 @@ struct JournalInsightView: View {
             }
         }
         .overlay {
-            if let generationError {
+            if let generationAlert {
                 MaiJurAlert(
-                    symbol: "sparkles",
-                    tint: .indigo,
-                    title: "Insight belum dapat dibuat",
-                    message: generationError,
+                    symbol: generationAlert.symbol,
+                    tint: generationAlert.tint,
+                    title: generationAlert.title,
+                    message: generationAlert.message,
                     primaryTitle: "Tutup",
                     primaryRole: nil,
                     primaryAction: {
-                        self.generationError = nil
+                        self.generationAlert = nil
                     }
                 )
+                .id(generationAlertID)
             }
         }
         .translationTask(inputTranslationConfiguration) { session in
@@ -88,6 +96,7 @@ struct JournalInsightView: View {
 
     private func generateInsights() async {
         isGenerating = true
+        generationAlert = nil
 
         do {
             try InsightInputValidator.validate(journal.text)
@@ -99,8 +108,15 @@ struct JournalInsightView: View {
         let plan = InsightLanguagePipeline.journalPlan(for: journal.text)
 
         if plan.needsInputTranslation {
-            inputTranslationJournal = journal
-            inputTranslationConfiguration = plan.inputTranslationConfiguration
+            do {
+                try await InsightLanguagePipeline.verifyAutomaticTranslationSupport(
+                    for: journal.text
+                )
+                inputTranslationJournal = journal
+                triggerInputTranslation(with: plan.inputTranslationConfiguration)
+            } catch {
+                finish(with: error)
+            }
             return
         }
 
@@ -123,6 +139,21 @@ struct JournalInsightView: View {
 
         do {
             let translation = try await session.translate(inputTranslationJournal.text)
+            Self.logger.info(
+                "Input translation source language: \(translation.sourceLanguage.minimalIdentifier, privacy: .public); target language: \(translation.targetLanguage.minimalIdentifier, privacy: .public)"
+            )
+            InsightDebugLog.fields("Input translation · Journal", [
+                ("sourceLanguage", translation.sourceLanguage.minimalIdentifier),
+                ("targetLanguage", translation.targetLanguage.minimalIdentifier),
+                ("sourceText", inputTranslationJournal.text),
+                ("targetText", translation.targetText)
+            ])
+            guard InsightLanguagePipeline.hasPlausibleTranslationCoverage(
+                sourceText: inputTranslationJournal.text,
+                translatedText: translation.targetText
+            ) else {
+                throw InsightTranslationError.incompleteTranslation
+            }
             guard InsightLanguagePipeline.isValidTranslatedInput(translation.targetText) else {
                 throw InsightTranslationError.invalidProcessingLanguage
             }
@@ -153,11 +184,11 @@ struct JournalInsightView: View {
             analysis: analysis,
             sourceLanguage: sourceLanguage
         )
-        outputTranslationConfiguration = TranslationSession.Configuration(
+        triggerOutputTranslation(with: TranslationSession.Configuration(
             source: InsightLanguagePipeline.processingLanguage,
             target: InsightLanguagePipeline.displayLanguage,
             preferredStrategy: .highFidelity
-        )
+        ))
     }
 
     private func finishOutputTranslation(using session: TranslationSession) async {
@@ -185,6 +216,9 @@ struct JournalInsightView: View {
         sourceLanguage: Locale.Language
     ) {
         let processingAnalysis = processingAnalysis ?? displayAnalysis
+        Self.logger.info(
+            "Saving journal insight with recorded source language: \(sourceLanguage.minimalIdentifier, privacy: .public)"
+        )
         guard store.saveHistory(
             for: journal.id,
             summary: displayAnalysis.summary,
@@ -206,15 +240,35 @@ struct JournalInsightView: View {
         finish()
     }
 
+    private func triggerInputTranslation(
+        with configuration: TranslationSession.Configuration
+    ) {
+        if inputTranslationConfiguration == configuration {
+            inputTranslationConfiguration?.invalidate()
+        } else {
+            inputTranslationConfiguration = configuration
+        }
+    }
+
+    private func triggerOutputTranslation(
+        with configuration: TranslationSession.Configuration
+    ) {
+        if outputTranslationConfiguration == configuration {
+            outputTranslationConfiguration?.invalidate()
+        } else {
+            outputTranslationConfiguration = configuration
+        }
+    }
+
     private func finish(with error: Error? = nil) {
-        inputTranslationConfiguration = nil
-        outputTranslationConfiguration = nil
         inputTranslationJournal = nil
         outputTranslationJob = nil
         isGenerating = false
 
         if let error {
-            generationError = InsightAlertCopy.message(for: error)
+            InsightDebugLog.error("Journal insight pipeline · Error", error)
+            generationAlertID = UUID()
+            generationAlert = InsightAlertCopy.presentation(for: error)
         }
     }
 }
@@ -239,7 +293,7 @@ private struct InsightHero: View {
                 .accessibilityHidden(true)
 
             VStack(spacing: 6) {
-                Text(hasResult ? "Ruang refleksimu" : "Kenali ceritamu lebih dalam")
+                Text(hasResult ? "Insight dari jurnalmu" : "Kenali ceritamu lebih dalam")
                     .font(.title2.weight(.bold))
                     .multilineTextAlignment(.center)
 
@@ -275,7 +329,7 @@ private struct InsightIntroduction: View {
 
             InsightFeatureRow(
                 icon: "text.alignleft",
-                title: "Inti Cerita",
+                title: "Rangkuman Jurnal",
                 description: "Inti pengalamanmu dalam bentuk yang lebih mudah dipahami."
             )
             InsightFeatureRow(
@@ -369,7 +423,7 @@ struct InsightResultCards: View {
 
             InsightContentCard(
                 icon: "text.alignleft",
-                title: "Inti Cerita",
+                title: "Rangkuman Jurnal",
                 text: snapshot.summary
             )
             InsightContentCard(

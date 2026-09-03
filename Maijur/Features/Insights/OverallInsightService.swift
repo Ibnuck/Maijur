@@ -49,6 +49,12 @@ struct OverallInsightService {
 
         guard let accumulated else { throw OverallInsightError.noNewInsights }
         let coveredIDs = Array(Set((previous?.coveredInsightIDs ?? []) + newInsights.map(\.id)))
+        InsightDebugLog.fields("Overall generation · Final English result", [
+            ("overview", accumulated.overview),
+            ("patterns", accumulated.formattedPatterns),
+            ("recentFocus", accumulated.recentFocus),
+            ("coveredInsightCount", String(coveredIDs.count))
+        ])
 
         return OverallInsightGeneration(
             overview: accumulated.overview,
@@ -81,6 +87,13 @@ struct OverallInsightService {
             generating: OverallInsightOutput.self,
             options: GenerationOptions(temperature: 0.3, maximumResponseTokens: 1_200)
         ).content
+        InsightDebugLog.fields("Foundation Models · Overall candidate", [
+            ("previousOverall", previous?.promptText ?? "None"),
+            ("newInsights", insights.map(\.promptText).joined(separator: "\n\n")),
+            ("generatedOverview", candidate.overview),
+            ("generatedPatterns", candidate.formattedPatterns),
+            ("generatedRecentFocus", candidate.recentFocus)
+        ])
 
         guard OverallInsightQuality.needsRevision(
             overview: candidate.overview,
@@ -108,6 +121,12 @@ struct OverallInsightService {
             generating: OverallInsightOutput.self,
             options: GenerationOptions(temperature: 0.1, maximumResponseTokens: 1_000)
         ).content
+        InsightDebugLog.fields("Foundation Models · Overall repair", [
+            ("candidate", candidate.promptText),
+            ("repairedOverview", repaired.overview),
+            ("repairedPatterns", repaired.formattedPatterns),
+            ("repairedRecentFocus", repaired.recentFocus)
+        ])
 
         guard !OverallInsightQuality.needsRevision(
             overview: repaired.overview,

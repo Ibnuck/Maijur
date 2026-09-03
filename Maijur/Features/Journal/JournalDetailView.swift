@@ -168,7 +168,7 @@ private struct JournalInsightCallout: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(hasInsight ? "Buka Insight" : "Temukan Insight")
                     .font(.headline)
-                Text(hasInsight ? "Lihat kembali inti cerita dan ruang refleksimu." : "Temukan inti cerita, tema, dan ruang refleksi personal.")
+                Text(hasInsight ? "Lihat kembali rangkuman dan refleksimu." : "Temukan rangkuman, tema, dan refleksi personal.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.leading)

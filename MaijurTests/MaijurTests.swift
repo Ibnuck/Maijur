@@ -78,6 +78,48 @@ struct MaijurTests {
         ))
     }
 
+    @Test("Random Latin text is rejected as an uncertain source language")
+    func randomLatinTextIsRejected() {
+        let plan = InsightLanguagePipeline.journalPlan(
+            for: "dabksfybd aigefb7e983 ASJDHF Soto aiw8e77"
+        )
+
+        #expect(plan.sourceLanguage == nil)
+        #expect(plan.confidence == nil)
+        #expect(plan.needsInputTranslation == false)
+    }
+
+    @Test("Short English with a clear language margin remains supported")
+    func shortEnglishWithClearMarginIsSupported() {
+        let plan = InsightLanguagePipeline.journalPlan(for: "I eat shit today")
+
+        #expect(plan.sourceLanguage?.isEquivalent(to: Locale.Language(identifier: "en")) == true)
+        #expect(plan.confidence != nil)
+        #expect(plan.needsInputTranslation == false)
+    }
+
+    @Test("Natural Indonesian and English code mixing remains supported")
+    func indonesianEnglishMixIsSupported() {
+        let plan = InsightLanguagePipeline.journalPlan(
+            for: "Hari ini aku meeting dengan team lalu makan fried rice bersama teman."
+        )
+
+        #expect(plan.sourceLanguage?.isEquivalent(to: Locale.Language(identifier: "id")) == true)
+        #expect(plan.needsInputTranslation)
+    }
+
+    @Test("A translation that drops most source words is rejected")
+    func incompleteTranslationCoverageIsRejected() {
+        #expect(!InsightLanguagePipeline.hasPlausibleTranslationCoverage(
+            sourceText: "Kumakain ako ng fried rice sa gilid ng bangin habang pinagmamasdan ang kagubatan mula sa bundok.",
+            translatedText: "fried rice"
+        ))
+        #expect(InsightLanguagePipeline.hasPlausibleTranslationCoverage(
+            sourceText: "Hari ini aku makan nasi goreng bersama teman setelah pulang bekerja.",
+            translatedText: "Today I ate fried rice with a friend after coming home from work."
+        ))
+    }
+
     @Test("Empty fixture has loaded empty lists")
     func emptyFixture() {
         let store = MockData.emptyStore()
