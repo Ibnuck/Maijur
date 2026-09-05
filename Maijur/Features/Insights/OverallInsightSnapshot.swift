@@ -7,6 +7,10 @@ struct OverallInsightSnapshot: Equatable, Identifiable {
     let overview: String
     let patterns: String
     let recentFocus: String
+    let processingOverview: String
+    let processingPatterns: String
+    let processingRecentFocus: String
+    let displayLanguageCode: String
     let coveredInsightIDs: [UUID]
     let promptVersion: String
 
@@ -17,6 +21,10 @@ struct OverallInsightSnapshot: Equatable, Identifiable {
         overview: String,
         patterns: String,
         recentFocus: String,
+        processingOverview: String? = nil,
+        processingPatterns: String? = nil,
+        processingRecentFocus: String? = nil,
+        displayLanguageCode: String = "id",
         coveredInsightIDs: [UUID],
         promptVersion: String = ""
     ) {
@@ -26,11 +34,33 @@ struct OverallInsightSnapshot: Equatable, Identifiable {
         self.overview = overview
         self.patterns = patterns
         self.recentFocus = recentFocus
+        self.processingOverview = processingOverview ?? overview
+        self.processingPatterns = processingPatterns ?? patterns
+        self.processingRecentFocus = processingRecentFocus ?? recentFocus
+        self.displayLanguageCode = displayLanguageCode
         self.coveredInsightIDs = coveredInsightIDs
         self.promptVersion = promptVersion
     }
 
     func isCompatible(with currentPromptVersion: String) -> Bool {
-        promptVersion.isEmpty || promptVersion == currentPromptVersion
+        promptVersion == currentPromptVersion
+    }
+
+    func isDisplayed(in language: Locale.Language) -> Bool {
+        Locale.Language(identifier: displayLanguageCode).isEquivalent(to: language)
+    }
+
+    func hasValidLanguageContract() -> Bool {
+        isDisplayed(in: InsightLanguagePipeline.displayLanguage)
+            && InsightLanguagePipeline.isValidOverallDisplay(
+                overview: overview,
+                patterns: patterns,
+                recentFocus: recentFocus
+            )
+            && InsightLanguagePipeline.isValidOverallProcessing(
+                overview: processingOverview,
+                patterns: processingPatterns,
+                recentFocus: processingRecentFocus
+            )
     }
 }

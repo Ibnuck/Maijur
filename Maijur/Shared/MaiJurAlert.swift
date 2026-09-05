@@ -1,4 +1,6 @@
+import FoundationModels
 import SwiftUI
+import Translation
 
 struct MaiJurAlert: View {
     let symbol: String
@@ -21,34 +23,8 @@ struct MaiJurAlert: View {
                 .accessibilityHidden(true)
 
             VStack(spacing: 0) {
-                ScrollView {
-                    VStack(spacing: 16) {
-                        Image(systemName: symbol)
-                            .font(.system(size: 23, weight: .semibold))
-                            .foregroundStyle(tint)
-                            .frame(width: 58, height: 58)
-                            .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                            .accessibilityHidden(true)
-
-                        VStack(spacing: 6) {
-                            Text(title)
-                                .font(.title3.weight(.bold))
-                                .multilineTextAlignment(.center)
-                                .accessibilityAddTraits(.isHeader)
-                                .accessibilityFocused($isTitleFocused)
-
-                            Text(message)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-
-                        if let journal {
-                            JournalAlertPreview(journal: journal)
-                        }
-                    }
+                alertContent
                     .padding(22)
-                }
 
                 Divider()
 
@@ -63,7 +39,8 @@ struct MaiJurAlert: View {
             .shadow(color: .black.opacity(0.20), radius: 30, y: 16)
             .padding(.horizontal, 30)
             .padding(.vertical, 24)
-            .frame(maxWidth: 430, maxHeight: 700)
+            .frame(maxWidth: 430)
+            .fixedSize(horizontal: false, vertical: true)
         }
         .transaction { transaction in
             transaction.animation = nil
@@ -80,6 +57,47 @@ struct MaiJurAlert: View {
         .onAppear {
             isTitleFocused = true
         }
+    }
+
+    @ViewBuilder
+    private var alertContent: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            ScrollView {
+                alertContentStack
+            }
+            .frame(maxHeight: 360)
+        } else {
+            alertContentStack
+        }
+    }
+
+    private var alertContentStack: some View {
+        VStack(spacing: 16) {
+            Image(systemName: symbol)
+                .font(.system(size: 23, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 58, height: 58)
+                .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .accessibilityHidden(true)
+
+            VStack(spacing: 6) {
+                Text(title)
+                    .font(.title3.weight(.bold))
+                    .multilineTextAlignment(.center)
+                    .accessibilityAddTraits(.isHeader)
+                    .accessibilityFocused($isTitleFocused)
+
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            if let journal {
+                JournalAlertPreview(journal: journal)
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
@@ -206,7 +224,37 @@ private struct JournalAlertPreview: View {
     }
 }
 
+struct InsightAlertPresentation {
+    let symbol: String
+    let tint: Color
+    let title: String
+    let message: String
+}
+
 enum InsightAlertCopy {
+    static func presentation(
+        for error: Error,
+        defaultTitle: String = "Insight belum dapat dibuat",
+        defaultSymbol: String = "sparkles"
+    ) -> InsightAlertPresentation {
+        if let error = error as? LanguageModelSession.GenerationError,
+           isSafetyRejection(error) {
+            return InsightAlertPresentation(
+                symbol: "exclamationmark.shield.fill",
+                tint: .orange,
+                title: "Konten dibatasi",
+                message: generationMessage(for: error)
+            )
+        }
+
+        return InsightAlertPresentation(
+            symbol: defaultSymbol,
+            tint: .indigo,
+            title: defaultTitle,
+            message: message(for: error)
+        )
+    }
+
     static func message(for error: Error) -> String {
         if let error = error as? JournalAnalysisError {
             return error.localizedDescription
@@ -214,6 +262,75 @@ enum InsightAlertCopy {
         if let error = error as? OverallInsightError {
             return error.localizedDescription
         }
+        if let error = error as? InsightTranslationError {
+            return error.localizedDescription
+        }
+        if let error = error as? LanguageModelSession.GenerationError {
+            return generationMessage(for: error)
+        }
+        if error is TranslationError {
+            return translationMessage(for: error)
+        }
+        if error is CancellationError {
+            return "Proses pembuatan insight dibatalkan. Silakan coba lagi."
+        }
         return "Model belum menghasilkan insight yang dapat digunakan. Jurnalmu tetap aman; silakan coba lagi."
+    }
+
+    private static func generationMessage(
+        for error: LanguageModelSession.GenerationError
+    ) -> String {
+        switch error {
+        case .exceededContextWindowSize:
+            "Bahan insight terlalu panjang untuk diproses sekaligus. Jurnalmu tetap aman; coba ringkas isinya lalu buat insight lagi."
+        case .assetsUnavailable:
+            "Model Apple Intelligence belum siap di iPhone. Tunggu hingga proses penyiapan selesai, lalu coba lagi."
+        case .guardrailViolation, .refusal:
+            "Isi jurnal ini belum dapat diproses karena dibatasi oleh sistem keamanan Apple Intelligence. Jurnalmu tetap aman dan tersimpan."
+        case .unsupportedGuide:
+            "Format insight belum didukung oleh model di iPhone ini. Coba lagi setelah perangkat diperbarui."
+        case .unsupportedLanguageOrLocale:
+            "Bahasa untuk memproses insight belum didukung di iPhone ini. Coba tambahkan detail dengan bahasa yang didukung."
+        case .decodingFailure:
+            "Model belum menghasilkan format insight yang sesuai. Silakan coba lagi."
+        case .rateLimited:
+            "Model sedang sibuk. Tunggu sebentar, lalu coba buat insight lagi."
+        case .concurrentRequests:
+            "Insight lain masih sedang diproses. Tunggu hingga selesai, lalu coba lagi."
+        @unknown default:
+            "Model belum menghasilkan insight yang dapat digunakan. Jurnalmu tetap aman; silakan coba lagi."
+        }
+    }
+
+    private static func isSafetyRejection(
+        _ error: LanguageModelSession.GenerationError
+    ) -> Bool {
+        switch error {
+        case .guardrailViolation, .refusal:
+            true
+        default:
+            false
+        }
+    }
+
+    private static func translationMessage(for error: Error) -> String {
+        if TranslationError.notInstalled ~= error {
+            return "Paket bahasa yang diperlukan belum terpasang di iPhone. Pasang paket bahasanya, lalu coba lagi."
+        }
+        if TranslationError.unableToIdentifyLanguage ~= error {
+            return "Bahasa jurnal belum dapat dikenali. Coba tambahkan sedikit detail lalu buat insight lagi."
+        }
+        if TranslationError.nothingToTranslate ~= error {
+            return "Tidak ada isi jurnal yang dapat diterjemahkan. Tambahkan sedikit cerita lalu coba lagi."
+        }
+        if TranslationError.unsupportedSourceLanguage ~= error
+            || TranslationError.unsupportedTargetLanguage ~= error
+            || TranslationError.unsupportedLanguagePairing ~= error {
+            return "Pasangan bahasa ini belum didukung untuk membuat insight di iPhone."
+        }
+        if TranslationError.alreadyCancelled ~= error {
+            return "Proses penerjemahan dibatalkan. Silakan coba lagi."
+        }
+        return "Terjemahan belum dapat diselesaikan di iPhone. Jurnalmu tetap aman; silakan coba lagi."
     }
 }

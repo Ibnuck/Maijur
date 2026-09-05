@@ -56,7 +56,9 @@ analyzed again.
 
 All model processing is performed through Apple's on-device Foundation Models
 framework. Journal content is not sent to an application server or written to
-diagnostic logs.
+production diagnostic logs. Debug builds intentionally print complete local
+pipeline traces to the Xcode console for development; these traces are compiled
+out of Release builds.
 
 ## Requirements
 
@@ -66,8 +68,9 @@ diagnostic logs.
   insight generation
 
 The core journal experience also runs when Foundation Models are unavailable.
-Generated insight quality is currently designed and tested primarily for
-English journal content.
+Generated insights use English as an internal processing language and are
+translated to Indonesian before they are saved for display. Journals written
+in other languages are translated to English for processing first.
 
 ## Run locally
 
@@ -84,7 +87,7 @@ Test Foundation Models output on a compatible physical device.
 - **Persistence:** SwiftData
 - **Generation:** Apple Foundation Models with guided `@Generable` output
 - **State:** Observation
-- **Diagnostics:** OSLog without journal content
+- **Diagnostics:** OSLog metadata and DEBUG-only full pipeline traces
 - **Dependencies:** Apple frameworks only
 
 Product requirements, architecture decisions, and completed goals live in
@@ -93,11 +96,12 @@ Product requirements, architecture decisions, and completed goals live in
 
 ## Verification
 
-The G0–G5 personal-project MVP is complete. The unit and UI suites pass on an
-iOS 26.5 iPhone 17 simulator. Recorded development measurements include an
-average simulator launch time of `0.85 s`, a responsive 500-entry journal list,
-and approximately `4 s` for a normal per-journal Foundation Models run on an
-iPhone 17.
+The initial G0–G5 personal-project MVP verification is complete. The focused
+Indonesian-output follow-up is in review pending target-device validation. The
+unit and UI suites previously passed on an iOS 26.5 iPhone 17 simulator.
+Recorded development measurements include an average simulator launch time of
+`0.85 s`, a responsive 500-entry journal list, and approximately `4 s` for a
+normal per-journal Foundation Models run on an iPhone 17.
 
 See the detailed [quality verification record](docs/goals/G5-quality.md).
 

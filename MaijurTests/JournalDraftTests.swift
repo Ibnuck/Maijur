@@ -1,5 +1,7 @@
 import Foundation
+import FoundationModels
 import Testing
+import Translation
 @testable import Maijur
 
 @Suite("Journal draft")
@@ -94,6 +96,39 @@ struct JournalDraftTests {
 @Suite("Journal analysis input")
 struct JournalAnalysisInputTests {
 
+    @Test("One-word journal is rejected before insight generation")
+    func oneWordJournalIsRejected() {
+        #expect(throws: JournalAnalysisError.self) {
+            try InsightInputValidator.validate("hujan")
+        }
+    }
+
+    @Test("Analysis service rejects a one-word journal before checking the model")
+    func serviceRejectsOneWordJournal() async {
+        let journal = JournalEntry(id: UUID(), date: .now, text: "hujan")
+
+        do {
+            _ = try await JournalAnalysisService().generate(for: journal)
+            Issue.record("Expected a one-word journal to be rejected")
+        } catch JournalAnalysisError.insufficientContent {
+            // Expected: validation must run before model availability or generation.
+        } catch {
+            Issue.record("Expected insufficientContent, received: \(error)")
+        }
+    }
+
+    @Test("Punctuation does not count as meaningful journal content")
+    func punctuationIsRejected() {
+        #expect(throws: JournalAnalysisError.self) {
+            try InsightInputValidator.validate("hujan ... !!!")
+        }
+    }
+
+    @Test("Short meaningful sentence can generate an insight")
+    func meaningfulSentenceIsAccepted() throws {
+        try InsightInputValidator.validate("Aku sedih karena dibohongi.")
+    }
+
     @Test("Short journal remains one analysis chunk")
     func shortJournalRemainsWhole() {
         #expect(JournalAnalysisInput.chunks(from: "A short journal.") == ["A short journal."])
@@ -110,6 +145,69 @@ struct JournalAnalysisInputTests {
         #expect(chunks.allSatisfy { $0.count <= JournalAnalysisInput.maximumCharactersPerChunk })
         #expect(chunks.joined(separator: " ").contains("First paragraph."))
         #expect(chunks.joined(separator: " ").contains("Second paragraph."))
+    }
+}
+
+@Suite("Insight error messages")
+struct InsightErrorMessageTests {
+
+    @Test("Insufficient content gives an actionable message")
+    func insufficientContentMessage() {
+        let message = InsightAlertCopy.message(for: JournalAnalysisError.insufficientContent)
+
+        #expect(message.contains("terlalu singkat"))
+        #expect(message.contains("Tambahkan sedikit cerita"))
+    }
+
+    @Test("Semantic readiness asks for more personal context without judging the journal")
+    func semanticReadinessNeedsContextMessage() {
+        let message = InsightAlertCopy.message(
+            for: JournalAnalysisError.insightNeedsMoreContext
+        )
+
+        #expect(message.contains("sudah dapat dipahami"))
+        #expect(message.contains("Tambahkan apa yang terjadi"))
+        #expect(!message.localizedCaseInsensitiveContains("buruk"))
+    }
+
+    @Test("Uninterpretable journal receives a distinct recovery message")
+    func semanticReadinessCannotInterpretMessage() {
+        let message = InsightAlertCopy.message(
+            for: JournalAnalysisError.insightCannotInterpret
+        )
+
+        #expect(message.contains("belum dapat dipahami"))
+        #expect(message.contains("Periksa kembali"))
+    }
+
+    @Test("Guardrail violation does not expose technical language")
+    func guardrailMessage() {
+        let context = LanguageModelSession.GenerationError.Context(debugDescription: "test")
+        let error = LanguageModelSession.GenerationError.guardrailViolation(context)
+        let message = InsightAlertCopy.message(for: error)
+        let presentation = InsightAlertCopy.presentation(for: error)
+
+        #expect(message.contains("belum dapat diproses"))
+        #expect(message.contains("sistem keamanan Apple Intelligence"))
+        #expect(!message.localizedCaseInsensitiveContains("guardrail"))
+        #expect(presentation.title == "Konten dibatasi")
+        #expect(presentation.symbol == "exclamationmark.shield.fill")
+    }
+
+    @Test("Rate limit asks the person to wait")
+    func rateLimitMessage() {
+        let context = LanguageModelSession.GenerationError.Context(debugDescription: "test")
+        let error = LanguageModelSession.GenerationError.rateLimited(context)
+
+        #expect(InsightAlertCopy.message(for: error).contains("sedang sibuk"))
+    }
+
+    @Test("Missing translation pack has a specific message")
+    func missingTranslationPackMessage() {
+        let message = InsightAlertCopy.message(for: TranslationError.notInstalled)
+
+        #expect(message.contains("Paket bahasa"))
+        #expect(message.contains("belum terpasang"))
     }
 }
 
@@ -141,6 +239,8 @@ struct ReflectionPerspectiveTests {
     @Test("Second-person reflection is accepted")
     func acceptsSecondPerson() {
         #expect(!ReflectionPerspective.usesFirstPerson("You may be noticing what this connection means to you."))
+        #expect(ReflectionQuality.endsWithQuestion("What part of this moment mattered most to you?"))
+        #expect(!ReflectionQuality.endsWithQuestion("This moment may matter to you."))
     }
 
     @Test("First-person reflection is rejected")

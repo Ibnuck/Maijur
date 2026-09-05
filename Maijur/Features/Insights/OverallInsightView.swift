@@ -1,10 +1,14 @@
 import SwiftUI
+import Translation
 
 struct OverallInsightView: View {
     let store: JournalStore
 
     @State private var isGenerating = false
-    @State private var generationError: String?
+    @State private var generationAlert: InsightAlertPresentation?
+    @State private var generationAlertID = UUID()
+    @State private var outputTranslationConfiguration: TranslationSession.Configuration?
+    @State private var pendingInsights: [HistorySnapshot] = []
 
     private var insight: OverallInsightSnapshot? { store.overallInsight }
     private var pendingCount: Int { store.pendingOverallInsights.count }
@@ -14,82 +18,65 @@ struct OverallInsightView: View {
             InsightPageBackground()
 
             ScrollView {
-                VStack(spacing: 16) {
-                    OverallInsightHero(hasResult: insight != nil)
+                VStack(spacing: 20) {
+                    OverallInsightHeader(
+                        updatedAt: insight?.updatedAt,
+                        pendingCount: pendingCount
+                    )
 
                     if isGenerating {
                         OverallInsightLoadingView()
                     } else if let insight {
                         OverallInsightCards(insight: insight)
 
-                        if pendingCount == 0 {
-                            Label("Sudah mencakup semua insight jurnal terbaru", systemImage: "checkmark.circle.fill")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.green)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(18)
-                                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        }
+                        OverallInsightAction(
+                            pendingCount: pendingCount,
+                            action: { Task { await generateOverallInsight() } }
+                        )
                     } else if store.currentJournalInsights.isEmpty {
                         ContentUnavailableView {
                             Label("Belum Ada Bahan Insight", systemImage: "sparkles.rectangle.stack")
                         } description: {
-                            Text("Buat insight dari detail jurnal terlebih dahulu. Jurnal tanpa insight akan dilewati.")
+                            Text("Buat insight dari jurnalmu terlebih dahulu. Jurnal tanpa insight akan dilewati.")
                         }
                         .padding(.vertical, 30)
                     } else {
                         OverallInsightIntroduction(count: pendingCount)
+                        OverallInsightAction(
+                            pendingCount: pendingCount,
+                            action: { Task { await generateOverallInsight() } }
+                        )
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
+                .padding(.top, 20)
+                .padding(.bottom, 32)
                 .frame(maxWidth: 700)
                 .frame(maxWidth: .infinity)
             }
         }
-        .accessibilityHidden(generationError != nil)
+        .accessibilityHidden(generationAlert != nil)
         .navigationTitle("Insight Keseluruhan")
         .navigationBarTitleDisplayMode(.inline)
-        .safeAreaInset(edge: .bottom) {
-            if pendingCount > 0 && !isGenerating {
-                Button {
-                    Task { await generateOverallInsight() }
-                } label: {
-                    Label(buttonTitle, systemImage: "sparkles.rectangle.stack")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.indigo)
-                .controlSize(.large)
-                .padding(.horizontal)
-                .padding(.vertical, 10)
-                .background(.bar)
-                .accessibilityIdentifier("create-overall-insight-button")
-            }
-        }
         .overlay {
-            if let generationError {
+            if let generationAlert {
                 MaiJurAlert(
-                    symbol: "sparkles.rectangle.stack",
-                    tint: .indigo,
-                    title: insight == nil
-                        ? "Insight belum dapat dibuat"
-                        : "Insight belum dapat diperbarui",
-                    message: generationError,
+                    symbol: generationAlert.symbol,
+                    tint: generationAlert.tint,
+                    title: generationAlert.title,
+                    message: generationAlert.message,
                     primaryTitle: "Tutup",
                     primaryRole: nil,
                     primaryAction: {
-                        self.generationError = nil
+                        self.generationAlert = nil
                     }
                 )
+                .id(generationAlertID)
             }
         }
-    }
-
-    private var buttonTitle: String {
-        if insight == nil { return "Buat Insight Keseluruhan" }
-        return "Perbarui dengan \(pendingCount) Insight Baru"
+        .translationTask(outputTranslationConfiguration) { session in
+            await generateAndTranslate(using: session)
+        }
     }
 
     private func generateOverallInsight() async {
@@ -97,59 +84,157 @@ struct OverallInsightView: View {
         guard !newInsights.isEmpty else { return }
 
         isGenerating = true
-        defer { isGenerating = false }
+        generationAlert = nil
+        pendingInsights = newInsights
+        triggerOutputTranslation(with: TranslationSession.Configuration(
+            source: InsightLanguagePipeline.processingLanguage,
+            target: InsightLanguagePipeline.displayLanguage,
+            preferredStrategy: .highFidelity
+        ))
+    }
+
+    private func generateAndTranslate(using session: TranslationSession) async {
+        guard !pendingInsights.isEmpty else { return }
+        let newInsights = pendingInsights
+        pendingInsights = []
 
         do {
-            let result = try await OverallInsightService().generate(
+            let processingInsight = try await OverallInsightService().generate(
                 previous: store.overallInsight,
                 newInsights: newInsights
             )
-            store.saveOverallInsight(
-                overview: result.overview,
-                patterns: result.patterns,
-                recentFocus: result.recentFocus,
-                coveredInsightIDs: result.coveredInsightIDs,
-                promptVersion: OverallInsightService.promptVersion,
-                modelVersion: "Apple on-device"
+            guard InsightLanguagePipeline.isValidOverallProcessing(
+                overview: processingInsight.overview,
+                patterns: processingInsight.patterns,
+                recentFocus: processingInsight.recentFocus
+            ) else {
+                throw InsightTranslationError.invalidProcessingLanguage
+            }
+            let displayInsight = try await InsightTranslation.overallInsight(
+                from: processingInsight,
+                using: session
             )
+            guard store.saveOverallInsight(
+                overview: displayInsight.overview,
+                patterns: displayInsight.patterns,
+                recentFocus: displayInsight.recentFocus,
+                processingOverview: processingInsight.overview,
+                processingPatterns: processingInsight.patterns,
+                processingRecentFocus: processingInsight.recentFocus,
+                displayLanguageCode: InsightLanguagePipeline.languageCode(
+                    for: InsightLanguagePipeline.displayLanguage
+                ),
+                coveredInsightIDs: processingInsight.coveredInsightIDs,
+                promptVersion: OverallInsightService.promptVersion,
+                modelVersion: "Apple on-device + Translation"
+            ) != nil else {
+                throw JournalAnalysisError.persistenceFailed
+            }
         } catch {
-            generationError = InsightAlertCopy.message(for: error)
+            InsightDebugLog.error("Overall insight pipeline · Error", error)
+            generationAlertID = UUID()
+            generationAlert = InsightAlertCopy.presentation(
+                for: error,
+                defaultTitle: insight == nil
+                    ? "Insight belum dapat dibuat"
+                    : "Insight belum dapat diperbarui",
+                defaultSymbol: "sparkles.rectangle.stack"
+            )
+        }
+
+        isGenerating = false
+    }
+
+    private func triggerOutputTranslation(
+        with configuration: TranslationSession.Configuration
+    ) {
+        if outputTranslationConfiguration == configuration {
+            outputTranslationConfiguration?.invalidate()
+        } else {
+            outputTranslationConfiguration = configuration
         }
     }
 }
 
-private struct OverallInsightHero: View {
-    let hasResult: Bool
+private struct OverallInsightHeader: View {
+    let updatedAt: Date?
+    let pendingCount: Int
 
     var body: some View {
-        VStack(spacing: 16) {
+        HStack(alignment: .center, spacing: 14) {
             Image(systemName: "point.3.filled.connected.trianglepath.dotted")
-                .font(.system(size: 32, weight: .semibold))
+                .font(.title3.weight(.semibold))
                 .foregroundStyle(.white)
-                .frame(width: 72, height: 72)
-                .background(Color.indigo.gradient, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .shadow(color: Color.indigo.opacity(0.18), radius: 16, y: 7)
+                .frame(width: 48, height: 48)
+                .background(Color.indigo.gradient, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
                 .accessibilityHidden(true)
 
-            VStack(spacing: 6) {
-                Text(hasResult ? "Cerita besarmu" : "Lihat perjalananmu lebih utuh")
-                    .font(.title2.weight(.bold))
-                    .multilineTextAlignment(.center)
-                Text("Disusun dari insight jurnal yang sudah tersedia, bukan dari teks jurnal mentah.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Insight keseluruhan")
+                    .font(.title3.weight(.bold))
+
+                if let updatedAt {
+                    Text("Diperbarui \(updatedAt.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Dirangkai dari insight jurnal yang sudah tersedia.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            if pendingCount > 0 {
+                Text("\(pendingCount) baru")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.indigo)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Color.indigo.opacity(0.12), in: Capsule())
+            } else if updatedAt != nil {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.green)
+                    .accessibilityLabel("Sudah mencakup semua insight jurnal terbaru")
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 26)
-        .padding(.horizontal)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+    }
+}
+
+private struct OverallInsightAction: View {
+    let pendingCount: Int
+    let action: () -> Void
+
+    var body: some View {
+        Group {
+            if pendingCount > 0 {
+                Button(action: action) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "sparkles.rectangle.stack.fill")
+                            .font(.headline)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(pendingCount == 1 ? "Ada 1 insight baru" : "Ada \(pendingCount) insight baru")
+                                .font(.subheadline.weight(.semibold))
+                            Text("Perbarui insight keseluruhan")
+                                .font(.caption)
+                                .opacity(0.84)
+                        }
+                        Spacer()
+                        Image(systemName: "arrow.right")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.indigo.gradient, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("create-overall-insight-button")
+            }
         }
-        .shadow(color: Color.black.opacity(0.03), radius: 12, y: 5)
     }
 }
 
@@ -185,7 +270,7 @@ private struct OverallInsightLoadingView: View {
             ProgressView()
                 .controlSize(.large)
             VStack(spacing: 5) {
-                Text("Menghubungkan perjalananmu…")
+                Text("Menghubungkan insightmu…")
                     .font(.headline)
                 Text("Insight baru sedang dipadukan dengan gambaran yang sudah tersimpan.")
                     .font(.subheadline)
@@ -202,7 +287,7 @@ private struct OverallInsightLoadingView: View {
                 .stroke(Color.primary.opacity(0.06), lineWidth: 1)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Menghubungkan perjalananmu")
+        .accessibilityLabel("Menghubungkan insightmu")
         .accessibilityValue("Insight baru sedang dipadukan dengan gambaran yang sudah tersimpan.")
     }
 }
@@ -227,11 +312,6 @@ private struct OverallInsightCards: View {
                 title: "Yang Sedang Menonjol",
                 text: insight.recentFocus
             )
-
-            Text("Diperbarui \(insight.updatedAt.formatted(date: .abbreviated, time: .shortened))")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .trailing)
         }
     }
 }

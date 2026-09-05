@@ -1,15 +1,29 @@
+import OSLog
 import SwiftUI
+import Translation
 
 struct JournalInsightView: View {
     let journal: JournalEntry
     let store: JournalStore
 
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "MaiJur",
+        category: "LanguageDetection"
+    )
+
     @State private var isGenerating = false
-    @State private var generationError: String?
+    @State private var generationAlert: InsightAlertPresentation?
+    @State private var generationAlertID = UUID()
+    @State private var inputTranslationConfiguration: TranslationSession.Configuration?
+    @State private var outputTranslationConfiguration: TranslationSession.Configuration?
+    @State private var inputTranslationJournal: JournalEntry?
+    @State private var outputTranslationJob: JournalOutputTranslationJob?
 
     private var snapshot: HistorySnapshot? {
         store.history.first {
-            $0.belongsToCurrentRevision(of: journal) && $0.isCompatible(with: JournalAnalysisService.promptVersion)
+            $0.belongsToCurrentRevision(of: journal)
+                && $0.isCompatible(with: JournalAnalysisService.promptVersion)
+                && $0.hasValidLanguageContract()
         }
     }
 
@@ -36,7 +50,7 @@ struct JournalInsightView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .accessibilityHidden(generationError != nil)
+        .accessibilityHidden(generationAlert != nil)
         .navigationTitle("Insight")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
@@ -57,41 +71,214 @@ struct JournalInsightView: View {
             }
         }
         .overlay {
-            if let generationError {
+            if let generationAlert {
                 MaiJurAlert(
-                    symbol: "sparkles",
-                    tint: .indigo,
-                    title: "Insight belum dapat dibuat",
-                    message: generationError,
+                    symbol: generationAlert.symbol,
+                    tint: generationAlert.tint,
+                    title: generationAlert.title,
+                    message: generationAlert.message,
                     primaryTitle: "Tutup",
                     primaryRole: nil,
                     primaryAction: {
-                        self.generationError = nil
+                        self.generationAlert = nil
                     }
                 )
+                .id(generationAlertID)
             }
+        }
+        .translationTask(inputTranslationConfiguration) { session in
+            await continueAfterInputTranslation(using: session)
+        }
+        .translationTask(outputTranslationConfiguration) { session in
+            await finishOutputTranslation(using: session)
         }
     }
 
     private func generateInsights() async {
         isGenerating = true
-        defer { isGenerating = false }
+        generationAlert = nil
+
+        do {
+            try InsightInputValidator.validate(journal.text)
+        } catch {
+            finish(with: error)
+            return
+        }
+
+        let plan = InsightLanguagePipeline.journalPlan(for: journal.text)
+
+        if plan.needsInputTranslation {
+            do {
+                try await InsightLanguagePipeline.verifyAutomaticTranslationSupport(
+                    for: journal.text
+                )
+                inputTranslationJournal = journal
+                triggerInputTranslation(with: plan.inputTranslationConfiguration)
+            } catch {
+                finish(with: error)
+            }
+            return
+        }
+
+        guard let sourceLanguage = plan.sourceLanguage else {
+            finish(with: JournalAnalysisError.languageDetectionFailed)
+            return
+        }
 
         do {
             let analysis = try await JournalAnalysisService().generate(for: journal)
-            store.saveHistory(
-                for: journal.id,
-                summary: analysis.summary,
-                reflection: analysis.reflection,
-                digest: analysis.digest,
-                coveredJournalIDs: [journal.id],
-                promptVersion: JournalAnalysisService.promptVersion,
-                modelVersion: "Apple on-device"
-            )
+            requestOutputTranslation(analysis, sourceLanguage: sourceLanguage)
         } catch {
-            generationError = InsightAlertCopy.message(for: error)
+            finish(with: error)
         }
     }
+
+    private func continueAfterInputTranslation(using session: TranslationSession) async {
+        guard let inputTranslationJournal else { return }
+        self.inputTranslationJournal = nil
+
+        do {
+            let translation = try await session.translate(inputTranslationJournal.text)
+            Self.logger.info(
+                "Input translation source language: \(translation.sourceLanguage.minimalIdentifier, privacy: .public); target language: \(translation.targetLanguage.minimalIdentifier, privacy: .public)"
+            )
+            InsightDebugLog.fields("Input translation · Journal", [
+                ("sourceLanguage", translation.sourceLanguage.minimalIdentifier),
+                ("targetLanguage", translation.targetLanguage.minimalIdentifier),
+                ("sourceText", inputTranslationJournal.text),
+                ("targetText", translation.targetText)
+            ])
+            guard InsightLanguagePipeline.hasPlausibleTranslationCoverage(
+                sourceText: inputTranslationJournal.text,
+                translatedText: translation.targetText
+            ) else {
+                throw InsightTranslationError.incompleteTranslation
+            }
+            guard InsightLanguagePipeline.isValidTranslatedInput(
+                translation.targetText,
+                reportedTargetLanguage: translation.targetLanguage
+            ) else {
+                throw InsightTranslationError.invalidProcessingLanguage
+            }
+            let analysis = try await JournalAnalysisService().generate(
+                for: inputTranslationJournal,
+                processingText: translation.targetText
+            )
+            requestOutputTranslation(analysis, sourceLanguage: translation.sourceLanguage)
+        } catch {
+            finish(with: error)
+        }
+    }
+
+    private func requestOutputTranslation(
+        _ analysis: JournalAnalysis,
+        sourceLanguage: Locale.Language
+    ) {
+        guard InsightLanguagePipeline.isValidJournalProcessing(
+            summary: analysis.summary,
+            reflection: analysis.reflection,
+            digest: analysis.digest
+        ) else {
+            finish(with: InsightTranslationError.invalidProcessingLanguage)
+            return
+        }
+
+        outputTranslationJob = JournalOutputTranslationJob(
+            analysis: analysis,
+            sourceLanguage: sourceLanguage
+        )
+        triggerOutputTranslation(with: TranslationSession.Configuration(
+            source: InsightLanguagePipeline.processingLanguage,
+            target: InsightLanguagePipeline.displayLanguage,
+            preferredStrategy: .highFidelity
+        ))
+    }
+
+    private func finishOutputTranslation(using session: TranslationSession) async {
+        guard let outputTranslationJob else { return }
+        self.outputTranslationJob = nil
+
+        do {
+            let displayAnalysis = try await InsightTranslation.journalAnalysis(
+                from: outputTranslationJob.analysis,
+                using: session
+            )
+            save(
+                displayAnalysis,
+                processingAnalysis: outputTranslationJob.analysis,
+                sourceLanguage: outputTranslationJob.sourceLanguage
+            )
+        } catch {
+            finish(with: error)
+        }
+    }
+
+    private func save(
+        _ displayAnalysis: JournalAnalysis,
+        processingAnalysis: JournalAnalysis? = nil,
+        sourceLanguage: Locale.Language
+    ) {
+        let processingAnalysis = processingAnalysis ?? displayAnalysis
+        Self.logger.info(
+            "Saving journal insight with recorded source language: \(sourceLanguage.minimalIdentifier, privacy: .public)"
+        )
+        guard store.saveHistory(
+            for: journal.id,
+            summary: displayAnalysis.summary,
+            reflection: displayAnalysis.reflection,
+            digest: displayAnalysis.digest,
+            processingSummary: processingAnalysis.summary,
+            processingDigest: processingAnalysis.digest,
+            sourceLanguageCode: InsightLanguagePipeline.languageCode(for: sourceLanguage),
+            displayLanguageCode: InsightLanguagePipeline.languageCode(
+                for: InsightLanguagePipeline.displayLanguage
+            ),
+            coveredJournalIDs: [journal.id],
+            promptVersion: JournalAnalysisService.promptVersion,
+            modelVersion: "Apple on-device + Translation"
+        ) != nil else {
+            finish(with: JournalAnalysisError.persistenceFailed)
+            return
+        }
+        finish()
+    }
+
+    private func triggerInputTranslation(
+        with configuration: TranslationSession.Configuration
+    ) {
+        if inputTranslationConfiguration == configuration {
+            inputTranslationConfiguration?.invalidate()
+        } else {
+            inputTranslationConfiguration = configuration
+        }
+    }
+
+    private func triggerOutputTranslation(
+        with configuration: TranslationSession.Configuration
+    ) {
+        if outputTranslationConfiguration == configuration {
+            outputTranslationConfiguration?.invalidate()
+        } else {
+            outputTranslationConfiguration = configuration
+        }
+    }
+
+    private func finish(with error: Error? = nil) {
+        inputTranslationJournal = nil
+        outputTranslationJob = nil
+        isGenerating = false
+
+        if let error {
+            InsightDebugLog.error("Journal insight pipeline · Error", error)
+            generationAlertID = UUID()
+            generationAlert = InsightAlertCopy.presentation(for: error)
+        }
+    }
+}
+
+private struct JournalOutputTranslationJob {
+    let analysis: JournalAnalysis
+    let sourceLanguage: Locale.Language
 }
 
 private struct InsightHero: View {
@@ -109,7 +296,7 @@ private struct InsightHero: View {
                 .accessibilityHidden(true)
 
             VStack(spacing: 6) {
-                Text(hasResult ? "Ruang refleksimu" : "Kenali ceritamu lebih dalam")
+                Text(hasResult ? "Insight dari jurnalmu" : "Kenali ceritamu lebih dalam")
                     .font(.title2.weight(.bold))
                     .multilineTextAlignment(.center)
 
@@ -145,7 +332,7 @@ private struct InsightIntroduction: View {
 
             InsightFeatureRow(
                 icon: "text.alignleft",
-                title: "Inti Cerita",
+                title: "Rangkuman Jurnal",
                 description: "Inti pengalamanmu dalam bentuk yang lebih mudah dipahami."
             )
             InsightFeatureRow(
@@ -239,7 +426,7 @@ struct InsightResultCards: View {
 
             InsightContentCard(
                 icon: "text.alignleft",
-                title: "Inti Cerita",
+                title: "Rangkuman Jurnal",
                 text: snapshot.summary
             )
             InsightContentCard(

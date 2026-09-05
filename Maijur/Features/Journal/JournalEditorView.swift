@@ -124,7 +124,13 @@ struct JournalEditorView: View {
     }
 
     private func requestDismissal() {
-        hasChanges ? (showsDiscardConfirmation = true) : dismiss()
+        guard hasChanges else {
+            dismiss()
+            return
+        }
+
+        isWritingFocused = false
+        showsDiscardConfirmation = true
     }
 
     private func save() {
@@ -320,8 +326,8 @@ private struct JournalEditorCopy {
 
     static let create = JournalEditorCopy(
         navigationTitle: "Jurnal Baru",
-        writingTitle: "Apa yang ingin kamu simpan?",
-        placeholder: "Tulis pikiran, perasaan, atau kejadian yang ingin kamu ingat…",
+        writingTitle: "Apa yang ingin kamu tulis?",
+        placeholder: "Tulis pikiran, perasaan, atau kejadian kamu…",
         privacyNote: "Jurnal ini hanya tersimpan di perangkatmu.",
         discardTitle: "Buang jurnal baru?",
         discardMessage: "Tulisan yang belum disimpan akan hilang."
@@ -329,8 +335,8 @@ private struct JournalEditorCopy {
 
     static let edit = JournalEditorCopy(
         navigationTitle: "Edit Jurnal",
-        writingTitle: "Perbarui ceritamu",
-        placeholder: "Tulis ulang bagian yang ingin kamu ubah…",
+        writingTitle: "Apa yang ingin kamu ubah?",
+        placeholder: "Apa yang ingin kamu ubah…",
         privacyNote: "Perubahan tetap tersimpan hanya di perangkatmu.",
         discardTitle: "Buang perubahan?",
         discardMessage: "Jurnal akan kembali ke versi terakhir yang disimpan."
