@@ -154,7 +154,10 @@ struct JournalInsightView: View {
             ) else {
                 throw InsightTranslationError.incompleteTranslation
             }
-            guard InsightLanguagePipeline.isValidTranslatedInput(translation.targetText) else {
+            guard InsightLanguagePipeline.isValidTranslatedInput(
+                translation.targetText,
+                reportedTargetLanguage: translation.targetLanguage
+            ) else {
                 throw InsightTranslationError.invalidProcessingLanguage
             }
             let analysis = try await JournalAnalysisService().generate(

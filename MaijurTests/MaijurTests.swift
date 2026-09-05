@@ -120,6 +120,32 @@ struct MaijurTests {
         ))
     }
 
+    @Test("Short translated English trusts Translation target metadata")
+    func shortTranslatedEnglishUsesReportedTargetLanguage() {
+        let translatedSatay = "Eating chicken satay at Madura stall with Ibnu."
+
+        #expect(InsightLanguagePipeline.isValidTranslatedInput(
+            translatedSatay,
+            reportedTargetLanguage: Locale.Language(identifier: "en")
+        ))
+        #expect(!InsightLanguagePipeline.isValidTranslatedInput(
+            translatedSatay,
+            reportedTargetLanguage: Locale.Language(identifier: "id")
+        ))
+    }
+
+    @Test("Calendar metadata is removed from journal themes")
+    func calendarMetadataIsRemovedFromThemes() {
+        let themes = JournalThemeSanitizer.sanitize([
+            "August 31, 2026",
+            "Date",
+            "Chicken satay",
+            "Friendship"
+        ])
+
+        #expect(themes == ["Chicken satay", "Friendship"])
+    }
+
     @Test("Empty fixture has loaded empty lists")
     func emptyFixture() {
         let store = MockData.emptyStore()

@@ -214,8 +214,14 @@ enum InsightLanguagePipeline {
         )
     }
 
-    static func isValidTranslatedInput(_ text: String) -> Bool {
-        isValid([text], proseFieldIndices: [0], in: processingLanguage)
+    static func isValidTranslatedInput(
+        _ text: String,
+        reportedTargetLanguage: Locale.Language
+    ) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty
+            && wordCount(in: trimmed) > 0
+            && isEnglish(reportedTargetLanguage)
     }
 
     static func hasPlausibleTranslationCoverage(

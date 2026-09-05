@@ -239,6 +239,8 @@ struct ReflectionPerspectiveTests {
     @Test("Second-person reflection is accepted")
     func acceptsSecondPerson() {
         #expect(!ReflectionPerspective.usesFirstPerson("You may be noticing what this connection means to you."))
+        #expect(ReflectionQuality.endsWithQuestion("What part of this moment mattered most to you?"))
+        #expect(!ReflectionQuality.endsWithQuestion("This moment may matter to you."))
     }
 
     @Test("First-person reflection is rejected")
